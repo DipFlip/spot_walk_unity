@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+[ExecuteAlways]
 public sealed class SpotProceduralTrot : MonoBehaviour
 {
     [Serializable]
@@ -60,6 +61,20 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     [SerializeField] private float bodyPitchDegrees = 1.5f;
     [SerializeField] private float bodyRollDegrees = 1.2f;
     [SerializeField] private float returnToStandSpeed = 8f;
+    [SerializeField] private float bodyHeightOverFeet = 0.58f;
+    [SerializeField] private float bodyHeightFollowSpeed = 8f;
+    [SerializeField] private float terrainTiltDegrees = 10f;
+    [SerializeField] private float terrainTiltFollowSpeed = 8f;
+
+    [Header("Terrain Contact")]
+    [SerializeField] private bool previewInEditMode = true;
+    [SerializeField] private bool snapRootHeightInEditMode = true;
+    [SerializeField] private bool useTerrainRaycasts = true;
+    [SerializeField] private LayerMask groundLayers = ~0;
+    [SerializeField] private float raycastHeight = 0.8f;
+    [SerializeField] private float raycastDistance = 1.6f;
+    [SerializeField] private float footGroundOffset = 0.015f;
+    [SerializeField] private float maxStepHeightChange = 0.28f;
 
     [Header("Movement Detection")]
     [SerializeField] private float movementThreshold = 0.001f;
@@ -88,21 +103,53 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     private Vector3 velocityWorld;
     private float turnVelocity;
     private float signedTurnVelocity;
+    private float bodyHeightOffset;
+    private float terrainPitch;
+    private float terrainRoll;
+    private bool isInitialized;
+    private bool hasBasePose;
+    private bool hasBodyBasePose;
 
     private void Awake()
     {
-        MigrateOldSerializedValues();
-        BindLegs();
-        PoseNeutral();
-        CacheHomeFeet();
-        CacheBody();
+        Initialize();
 
         previousPosition = transform.position;
         previousRotation = transform.rotation;
     }
 
+    private void OnEnable()
+    {
+        Initialize();
+    }
+
+    private void OnValidate()
+    {
+        if (!isActiveAndEnabled)
+        {
+            return;
+        }
+
+        Initialize();
+        if (!Application.isPlaying && previewInEditMode)
+        {
+            UpdateEditModePose();
+        }
+    }
+
     private void LateUpdate()
     {
+        Initialize();
+        if (!Application.isPlaying)
+        {
+            if (previewInEditMode)
+            {
+                UpdateEditModePose();
+            }
+
+            return;
+        }
+
         float dt = Mathf.Max(Time.deltaTime, 0.0001f);
         Vector3 positionDelta = transform.position - previousPosition;
         float turnDelta = Quaternion.Angle(transform.rotation, previousRotation);
@@ -121,13 +168,104 @@ public sealed class SpotProceduralTrot : MonoBehaviour
             gaitTime += dt * cycleFrequency * cadenceScale;
         }
 
+        UpdateFootTargets(isMoving, dt);
+        UpdateBodyTerrainPose(dt, false);
         PoseNeutral();
         AnimateBody();
-        UpdateFootTargets(isMoving, dt);
         SolveLegs();
 
         previousPosition = transform.position;
         previousRotation = transform.rotation;
+    }
+
+    private void Initialize()
+    {
+        if (isInitialized)
+        {
+            return;
+        }
+
+        MigrateOldSerializedValues();
+        BindLegs();
+        PoseNeutral();
+        CacheHomeFeet();
+        CacheBody();
+        isInitialized = true;
+    }
+
+    private void UpdateEditModePose()
+    {
+        PoseNeutral();
+        if (snapRootHeightInEditMode)
+        {
+            SnapRootHeightForNeutralPose();
+            PoseNeutral();
+        }
+
+        ResetFeetToGroundedHome();
+        UpdateBodyTerrainPose(1f, true);
+        AnimateBody();
+        SolveLegs();
+    }
+
+    private void SnapRootHeightForNeutralPose()
+    {
+        if (!useTerrainRaycasts || legs == null)
+        {
+            return;
+        }
+
+        float totalDelta = 0f;
+        int count = 0;
+        foreach (Leg leg in legs)
+        {
+            if (leg == null || leg.lowerLeg == null)
+            {
+                continue;
+            }
+
+            Vector3 neutralFoot = GetFootWorld(leg);
+            if (!TryProjectFootToGround(neutralFoot, out Vector3 groundedFoot))
+            {
+                continue;
+            }
+
+            totalDelta += groundedFoot.y - neutralFoot.y;
+            count++;
+        }
+
+        if (count == 0)
+        {
+            return;
+        }
+
+        float averageDelta = totalDelta / count;
+        if (Mathf.Abs(averageDelta) < 0.001f)
+        {
+            return;
+        }
+
+        Vector3 position = transform.position;
+        position.y += averageDelta;
+        transform.position = position;
+    }
+
+    private void ResetFeetToGroundedHome()
+    {
+        foreach (Leg leg in legs)
+        {
+            if (leg == null || leg.lowerLeg == null)
+            {
+                continue;
+            }
+
+            Vector3 homeWorld = transform.TransformPoint(leg.homeLocal);
+            Vector3 groundedHome = ProjectFootToGround(homeWorld, homeWorld, false);
+            leg.plantedWorld = groundedHome;
+            leg.swingStartWorld = groundedHome;
+            leg.swingTargetWorld = groundedHome;
+            leg.wasSwinging = false;
+        }
     }
 
     private void BindLegs()
@@ -138,21 +276,23 @@ public sealed class SpotProceduralTrot : MonoBehaviour
             leg.upperLeg = FindDeepChild(leg.upperLegName);
             leg.lowerLeg = FindDeepChild(leg.lowerLegName);
 
-            if (leg.hip != null)
+            if (!hasBasePose && leg.hip != null)
             {
                 leg.hipBase = leg.hip.localRotation;
             }
 
-            if (leg.upperLeg != null)
+            if (!hasBasePose && leg.upperLeg != null)
             {
                 leg.upperBase = leg.upperLeg.localRotation;
             }
 
-            if (leg.lowerLeg != null)
+            if (!hasBasePose && leg.lowerLeg != null)
             {
                 leg.lowerBase = leg.lowerLeg.localRotation;
             }
         }
+
+        hasBasePose = true;
     }
 
     private void CacheHomeFeet()
@@ -175,10 +315,11 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     private void CacheBody()
     {
         bodyLink = FindDeepChild(bodyLinkName, false);
-        if (bodyLink != null && bodyLink != transform)
+        if (!hasBodyBasePose && bodyLink != null && bodyLink != transform)
         {
             bodyBaseLocalPosition = bodyLink.localPosition;
             bodyBaseLocalRotation = bodyLink.localRotation;
+            hasBodyBasePose = true;
         }
     }
 
@@ -237,14 +378,18 @@ public sealed class SpotProceduralTrot : MonoBehaviour
 
             bool shouldSwing = isMoving && stepBlend > 0.1f && IsGroupSwinging(leg.diagonalGroup, groupPhase);
             Vector3 homeWorld = transform.TransformPoint(leg.homeLocal);
+            homeWorld = ProjectFootToGround(homeWorld, leg.plantedWorld);
             Vector3 turnStep = GetTurnStep(leg, turnAmount);
             Vector3 desiredPlant = homeWorld + travelStep * 0.5f + backwardBias + strafeBias + turnStep + transform.right * (leg.sideSign * stepWidth * stepBlend);
+            desiredPlant = ProjectFootToGround(desiredPlant, homeWorld);
 
             if (shouldSwing && !leg.wasSwinging)
             {
                 leg.swingStartWorld = leg.plantedWorld;
                 float catchUp = Mathf.Clamp01(Vector3.Distance(leg.plantedWorld, homeWorld) / Mathf.Max(strideLength, 0.001f));
-                leg.swingTargetWorld = Vector3.Lerp(desiredPlant, homeWorld + travelStep + backwardBias + strafeBias + turnStep, catchUp);
+                Vector3 catchUpTarget = ProjectFootToGround(homeWorld + travelStep + backwardBias + strafeBias + turnStep, homeWorld);
+                leg.swingTargetWorld = Vector3.Lerp(desiredPlant, catchUpTarget, catchUp);
+                leg.swingTargetWorld = ProjectFootToGround(leg.swingTargetWorld, homeWorld);
             }
 
             if (shouldSwing)
@@ -260,7 +405,8 @@ public sealed class SpotProceduralTrot : MonoBehaviour
                 float allowedDrift = Mathf.Lerp((strideLength * strideScale) + minStepDistance, turnReplantDistance, Mathf.Abs(turnAmount));
                 if (!isMoving || stepBlend < 0.1f || drift > allowedDrift)
                 {
-                    leg.plantedWorld = Vector3.Lerp(leg.plantedWorld, homeWorld, 1f - Mathf.Exp(-footPlantSharpness * dt));
+                    Vector3 groundedHome = ProjectFootToGround(homeWorld, leg.plantedWorld);
+                    leg.plantedWorld = Vector3.Lerp(leg.plantedWorld, groundedHome, 1f - Mathf.Exp(-footPlantSharpness * dt));
                 }
             }
 
@@ -284,6 +430,40 @@ public sealed class SpotProceduralTrot : MonoBehaviour
 
         Vector3 tangentLocal = Vector3.Cross(Vector3.up, radial).normalized * Mathf.Sign(turnAmount);
         return transform.TransformDirection(tangentLocal) * (Mathf.Abs(turnAmount) * turnStrideLength * stepBlend);
+    }
+
+    private Vector3 ProjectFootToGround(Vector3 candidateWorld, Vector3 referenceWorld, bool clampHeight = true)
+    {
+        if (!useTerrainRaycasts)
+        {
+            return candidateWorld;
+        }
+
+        if (!TryProjectFootToGround(candidateWorld, out Vector3 grounded))
+        {
+            return candidateWorld;
+        }
+
+        float heightDelta = grounded.y - referenceWorld.y;
+        if (clampHeight && Mathf.Abs(heightDelta) > maxStepHeightChange)
+        {
+            grounded.y = referenceWorld.y + Mathf.Sign(heightDelta) * maxStepHeightChange;
+        }
+
+        return grounded;
+    }
+
+    private bool TryProjectFootToGround(Vector3 candidateWorld, out Vector3 grounded)
+    {
+        Vector3 rayOrigin = candidateWorld + Vector3.up * raycastHeight;
+        if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, raycastHeight + raycastDistance, groundLayers, QueryTriggerInteraction.Ignore))
+        {
+            grounded = candidateWorld;
+            return false;
+        }
+
+        grounded = hit.point + hit.normal * footGroundOffset;
+        return true;
     }
 
     private void SolveLegs()
@@ -365,8 +545,80 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         float pitch = Mathf.Sin(phase) * bodyPitchDegrees * motionBlend;
         float roll = Mathf.Cos(phase) * bodyRollDegrees * motionBlend;
 
-        bodyLink.localPosition = bodyBaseLocalPosition + new Vector3(0f, bob, 0f);
-        bodyLink.localRotation = bodyBaseLocalRotation * Quaternion.Euler(pitch, 0f, roll);
+        bodyLink.localPosition = bodyBaseLocalPosition + new Vector3(0f, bodyHeightOffset + bob, 0f);
+        bodyLink.localRotation = bodyBaseLocalRotation * Quaternion.Euler(terrainPitch + pitch, 0f, terrainRoll + roll);
+    }
+
+    private void UpdateBodyTerrainPose(float dt, bool snap)
+    {
+        if (!useTerrainRaycasts || legs == null || legs.Length == 0)
+        {
+            float bodyT = snap ? 1f : 1f - Mathf.Exp(-bodyHeightFollowSpeed * dt);
+            float tiltT = snap ? 1f : 1f - Mathf.Exp(-terrainTiltFollowSpeed * dt);
+            bodyHeightOffset = Mathf.Lerp(bodyHeightOffset, 0f, bodyT);
+            terrainPitch = Mathf.Lerp(terrainPitch, 0f, tiltT);
+            terrainRoll = Mathf.Lerp(terrainRoll, 0f, tiltT);
+            return;
+        }
+
+        float totalHeight = 0f;
+        int heightCount = 0;
+        foreach (Leg leg in legs)
+        {
+            if (leg == null || leg.lowerLeg == null)
+            {
+                continue;
+            }
+
+            totalHeight += leg.plantedWorld.y;
+            heightCount++;
+        }
+
+        if (heightCount == 0)
+        {
+            return;
+        }
+
+        float averageFootHeight = totalHeight / heightCount;
+        float baseBodyHeight = bodyLink != null && bodyLink.parent != null
+            ? bodyLink.parent.TransformPoint(bodyBaseLocalPosition).y
+            : transform.position.y;
+        float currentClearance = baseBodyHeight - averageFootHeight;
+        float targetOffset = bodyHeightOverFeet - currentClearance;
+        float bodyFollowT = snap ? 1f : 1f - Mathf.Exp(-bodyHeightFollowSpeed * dt);
+        bodyHeightOffset = Mathf.Lerp(bodyHeightOffset, targetOffset, bodyFollowT);
+
+        if (TryGetLeg("fl_", out Leg fl) && TryGetLeg("fr_", out Leg fr) && TryGetLeg("hl_", out Leg hl) && TryGetLeg("hr_", out Leg hr))
+        {
+            float frontHeight = (fl.plantedWorld.y + fr.plantedWorld.y) * 0.5f;
+            float rearHeight = (hl.plantedWorld.y + hr.plantedWorld.y) * 0.5f;
+            float leftHeight = (fl.plantedWorld.y + hl.plantedWorld.y) * 0.5f;
+            float rightHeight = (fr.plantedWorld.y + hr.plantedWorld.y) * 0.5f;
+
+            float bodyLength = Mathf.Max(0.1f, Mathf.Abs(fl.homeLocal.z - hl.homeLocal.z));
+            float bodyWidth = Mathf.Max(0.1f, Mathf.Abs(fl.homeLocal.x - fr.homeLocal.x));
+            float targetPitch = Mathf.Clamp(-Mathf.Atan2(frontHeight - rearHeight, bodyLength) * Mathf.Rad2Deg, -terrainTiltDegrees, terrainTiltDegrees);
+            float targetRoll = Mathf.Clamp(Mathf.Atan2(leftHeight - rightHeight, bodyWidth) * Mathf.Rad2Deg, -terrainTiltDegrees, terrainTiltDegrees);
+
+            float tiltT = snap ? 1f : 1f - Mathf.Exp(-terrainTiltFollowSpeed * dt);
+            terrainPitch = Mathf.Lerp(terrainPitch, targetPitch, tiltT);
+            terrainRoll = Mathf.Lerp(terrainRoll, targetRoll, tiltT);
+        }
+    }
+
+    private bool TryGetLeg(string prefix, out Leg foundLeg)
+    {
+        foreach (Leg leg in legs)
+        {
+            if (leg != null && leg.hipName.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                foundLeg = leg;
+                return true;
+            }
+        }
+
+        foundLeg = null;
+        return false;
     }
 
     private void MigrateOldSerializedValues()
@@ -419,6 +671,46 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         if (Mathf.Approximately(turnReplantDistance, 0f))
         {
             turnReplantDistance = 0.06f;
+        }
+
+        if (Mathf.Approximately(bodyHeightOverFeet, 0f))
+        {
+            bodyHeightOverFeet = 0.58f;
+        }
+
+        if (Mathf.Approximately(bodyHeightFollowSpeed, 0f))
+        {
+            bodyHeightFollowSpeed = 8f;
+        }
+
+        if (Mathf.Approximately(terrainTiltDegrees, 0f))
+        {
+            terrainTiltDegrees = 10f;
+        }
+
+        if (Mathf.Approximately(terrainTiltFollowSpeed, 0f))
+        {
+            terrainTiltFollowSpeed = 8f;
+        }
+
+        if (Mathf.Approximately(raycastHeight, 0f))
+        {
+            raycastHeight = 0.8f;
+        }
+
+        if (Mathf.Approximately(raycastDistance, 0f))
+        {
+            raycastDistance = 1.6f;
+        }
+
+        if (Mathf.Approximately(footGroundOffset, 0f))
+        {
+            footGroundOffset = 0.015f;
+        }
+
+        if (Mathf.Approximately(maxStepHeightChange, 0f))
+        {
+            maxStepHeightChange = 0.28f;
         }
 
         if (footLocalOffset == Vector3.zero)
@@ -518,6 +810,12 @@ public sealed class SpotProceduralTrot : MonoBehaviour
             }
 
             Gizmos.DrawSphere(leg.plantedWorld, 0.025f);
+
+            if (useTerrainRaycasts)
+            {
+                Vector3 rayOrigin = leg.plantedWorld + Vector3.up * raycastHeight;
+                Gizmos.DrawLine(rayOrigin, rayOrigin + Vector3.down * (raycastHeight + raycastDistance));
+            }
         }
     }
 }
