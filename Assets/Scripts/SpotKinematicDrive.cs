@@ -49,6 +49,7 @@ public sealed class SpotKinematicDrive : MonoBehaviour
         Vector2 input = ReadMoveInput();
         float forward = Mathf.Clamp(input.y, -1f, 1f);
         float turn = Mathf.Clamp(input.x, -1f, 1f);
+        float strafe = Mathf.Clamp(ReadStrafeInput(), -1f, 1f);
 
         float dt = Time.deltaTime;
         transform.Rotate(0f, turn * turnSpeedDegrees * dt, 0f, Space.World);
@@ -56,8 +57,46 @@ public sealed class SpotKinematicDrive : MonoBehaviour
         float speed = forward >= 0f ? moveSpeed : moveSpeed * reverseSpeedMultiplier;
         Vector3 direction = moveInLocalForward ? transform.forward : Vector3.forward;
         transform.position += direction * (forward * speed * dt);
+        transform.position += transform.right * (strafe * moveSpeed * dt);
 
         AnimateVisualRoot(forward, turn, dt);
+    }
+
+    private float ReadStrafeInput()
+    {
+#if ENABLE_INPUT_SYSTEM
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard == null)
+        {
+            return 0f;
+        }
+
+        float strafe = 0f;
+        if (keyboard.qKey.isPressed)
+        {
+            strafe -= 1f;
+        }
+
+        if (keyboard.eKey.isPressed)
+        {
+            strafe += 1f;
+        }
+
+        return strafe;
+#else
+        float strafe = 0f;
+        if (Input.GetKey(KeyCode.Q))
+        {
+            strafe -= 1f;
+        }
+
+        if (Input.GetKey(KeyCode.E))
+        {
+            strafe += 1f;
+        }
+
+        return strafe;
+#endif
     }
 
     private Vector2 ReadMoveInput()
