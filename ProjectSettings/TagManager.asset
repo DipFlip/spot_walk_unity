@@ -3,8 +3,7 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 3
-  tags:
-  - robot
+  tags: []
   layers:
   - Default
   - TransparentFX
@@ -12,10 +11,10 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
-  - 
-  - 
+  - navMeshObjects
+  - decal
+  - Outline
+  - AssemblyAnimation
   - 
   - 
   - 
@@ -51,4 +50,3 @@ TagManager:
   - Light Layer 5
   - Light Layer 6
   - Light Layer 7
-  m_MigratedRenderPipelines: []
