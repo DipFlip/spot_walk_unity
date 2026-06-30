@@ -3,12 +3,13 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 3
-  tags: []
+  tags:
+  - robot
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - NavIgnore
   - Water
   - UI
   - navMeshObjects
@@ -50,3 +51,4 @@ TagManager:
   - Light Layer 5
   - Light Layer 6
   - Light Layer 7
+  m_MigratedRenderPipelines: []
