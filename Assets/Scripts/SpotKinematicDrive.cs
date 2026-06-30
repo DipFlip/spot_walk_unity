@@ -19,6 +19,7 @@ public sealed class SpotKinematicDrive : MonoBehaviour
 
     [Header("Imported URDF Cleanup")]
     [SerializeField] private bool freezeImportedPhysics = true;
+    [SerializeField] private bool disableImportedArticulationBodies = true;
     [SerializeField] private bool disableUrdfDemoControllers = true;
 
     private Vector3 visualBaseLocalPosition;
@@ -193,10 +194,35 @@ public sealed class SpotKinematicDrive : MonoBehaviour
         foreach (ArticulationBody body in GetComponentsInChildren<ArticulationBody>(true))
         {
             body.useGravity = false;
-            body.immovable = true;
             body.linearVelocity = Vector3.zero;
             body.angularVelocity = Vector3.zero;
+
+            if (IsRootArticulationBody(body))
+            {
+                body.immovable = true;
+            }
+
+            if (disableImportedArticulationBodies)
+            {
+                body.enabled = false;
+            }
         }
+    }
+
+    private static bool IsRootArticulationBody(ArticulationBody body)
+    {
+        Transform parent = body.transform.parent;
+        while (parent != null)
+        {
+            if (parent.GetComponent<ArticulationBody>() != null)
+            {
+                return false;
+            }
+
+            parent = parent.parent;
+        }
+
+        return true;
     }
 
     private void DisableUrdfDemoControllers()

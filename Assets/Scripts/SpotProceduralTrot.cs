@@ -68,13 +68,16 @@ public sealed class SpotProceduralTrot : MonoBehaviour
 
     [Header("Terrain Contact")]
     [SerializeField] private bool previewInEditMode = true;
-    [SerializeField] private bool snapRootHeightInEditMode = true;
+    [SerializeField] private bool snapRootHeightInEditMode;
+    [SerializeField] private bool snapRootHeightOnStart;
     [SerializeField] private bool useTerrainRaycasts = true;
+    [SerializeField] private bool ignoreOwnCollidersInTerrainRaycasts = true;
     [SerializeField] private LayerMask groundLayers = ~0;
     [SerializeField] private float raycastHeight = 0.8f;
     [SerializeField] private float raycastDistance = 1.6f;
     [SerializeField] private float footGroundOffset = 0.015f;
     [SerializeField] private float maxStepHeightChange = 0.28f;
+    [SerializeField] private float maxRootHeightSnap = 0.35f;
 
     [Header("Movement Detection")]
     [SerializeField] private float movementThreshold = 0.001f;
@@ -109,10 +112,17 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     private bool isInitialized;
     private bool hasBasePose;
     private bool hasBodyBasePose;
+    private bool hasSnappedRootHeightOnStart;
+    private readonly RaycastHit[] groundHits = new RaycastHit[32];
 
     private void Awake()
     {
         Initialize();
+
+        if (Application.isPlaying)
+        {
+            SnapRootHeightOnStart();
+        }
 
         previousPosition = transform.position;
         previousRotation = transform.rotation;
@@ -140,6 +150,11 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     private void LateUpdate()
     {
         Initialize();
+        if (Application.isPlaying)
+        {
+            SnapRootHeightOnStart();
+        }
+
         if (!Application.isPlaying)
         {
             if (previewInEditMode)
@@ -240,7 +255,7 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         }
 
         float averageDelta = totalDelta / count;
-        if (Mathf.Abs(averageDelta) < 0.001f)
+        if (Mathf.Abs(averageDelta) < 0.001f || Mathf.Abs(averageDelta) > maxRootHeightSnap)
         {
             return;
         }
@@ -266,6 +281,21 @@ public sealed class SpotProceduralTrot : MonoBehaviour
             leg.swingTargetWorld = groundedHome;
             leg.wasSwinging = false;
         }
+    }
+
+    private void SnapRootHeightOnStart()
+    {
+        if (hasSnappedRootHeightOnStart || !snapRootHeightOnStart)
+        {
+            return;
+        }
+
+        PoseNeutral();
+        SnapRootHeightForNeutralPose();
+        PoseNeutral();
+        ResetFeetToGroundedHome();
+        UpdateBodyTerrainPose(1f, true);
+        hasSnappedRootHeightOnStart = true;
     }
 
     private void BindLegs()
@@ -456,13 +486,46 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     private bool TryProjectFootToGround(Vector3 candidateWorld, out Vector3 grounded)
     {
         Vector3 rayOrigin = candidateWorld + Vector3.up * raycastHeight;
-        if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, raycastHeight + raycastDistance, groundLayers, QueryTriggerInteraction.Ignore))
+        int hitCount = Physics.RaycastNonAlloc(
+            rayOrigin,
+            Vector3.down,
+            groundHits,
+            raycastHeight + raycastDistance,
+            groundLayers,
+            QueryTriggerInteraction.Ignore);
+
+        if (hitCount == 0)
         {
             grounded = candidateWorld;
             return false;
         }
 
-        grounded = hit.point + hit.normal * footGroundOffset;
+        bool foundGround = false;
+        RaycastHit closestHit = default;
+        float closestDistance = float.PositiveInfinity;
+        for (int i = 0; i < hitCount; i++)
+        {
+            RaycastHit hit = groundHits[i];
+            if (ignoreOwnCollidersInTerrainRaycasts && hit.collider != null && hit.collider.transform.IsChildOf(transform))
+            {
+                continue;
+            }
+
+            if (hit.distance < closestDistance)
+            {
+                closestHit = hit;
+                closestDistance = hit.distance;
+                foundGround = true;
+            }
+        }
+
+        if (!foundGround)
+        {
+            grounded = candidateWorld;
+            return false;
+        }
+
+        grounded = closestHit.point + closestHit.normal * footGroundOffset;
         return true;
     }
 
@@ -711,6 +774,11 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         if (Mathf.Approximately(maxStepHeightChange, 0f))
         {
             maxStepHeightChange = 0.28f;
+        }
+
+        if (Mathf.Approximately(maxRootHeightSnap, 0f))
+        {
+            maxRootHeightSnap = 0.35f;
         }
 
         if (footLocalOffset == Vector3.zero)
