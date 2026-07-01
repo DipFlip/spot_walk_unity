@@ -16,13 +16,19 @@ public sealed class SpotKinematicDrive : MonoBehaviour
     [SerializeField] private bool restrictMovementToNavMesh = true;
     [SerializeField] private int navMeshAreaMask = NavMesh.AllAreas;
     [SerializeField] private float navMeshSampleDistance = 0.35f;
+    [SerializeField] private float navMeshProbeHorizontalTolerance = 0.02f;
+    [SerializeField] private float navMeshRaycastStartInset = 0.005f;
     [SerializeField] private bool slideAlongNavMeshEdges = true;
     [SerializeField] private int navMeshSlideIterations = 2;
+    [SerializeField] private int navMeshPartialMoveIterations = 6;
+    [SerializeField] private int navMeshSlideDirectionSamples = 13;
+    [SerializeField] private float navMeshSlideSearchAngle = 95f;
+    [SerializeField] private float navMeshSlideContinuityWeight = 0.2f;
     [SerializeField] private float navMeshSlideMinDistance = 0.001f;
     [SerializeField] private bool pushAwayFromNavMeshEdgesOnYaw = true;
     [SerializeField] private int navMeshYawPushIterations = 4;
-    [SerializeField] private float navMeshYawPushMaxDistance = 0.04f;
-    [SerializeField] private float navMeshYawPushSmoothing = 0.45f;
+    [SerializeField] private float navMeshYawPushSpeed = 0.3f;
+    [SerializeField] private float navMeshYawPushMinDistance = 0.001f;
     [SerializeField] private bool useNavMeshHeight;
     [SerializeField] private Transform frontNavProbe;
     [SerializeField] private Transform rearNavProbe;
@@ -43,6 +49,9 @@ public sealed class SpotKinematicDrive : MonoBehaviour
     private Vector3 visualBaseLocalPosition;
     private Quaternion visualBaseLocalRotation;
     private float gaitTime;
+    private Vector3 lastNavMeshMoveDirection;
+
+    public bool IsSteppingInPlaceRequested { get; private set; }
 
     private void Awake()
     {
@@ -71,7 +80,8 @@ public sealed class SpotKinematicDrive : MonoBehaviour
         float strafe = Mathf.Clamp(ReadStrafeInput(), -1f, 1f);
 
         float dt = Time.deltaTime;
-        RotateWithNavMeshRestriction(turn * turnSpeedDegrees * dt);
+        IsSteppingInPlaceRequested = false;
+        RotateWithNavMeshRestriction(turn * turnSpeedDegrees * dt, dt);
 
         float speed = forward >= 0f ? moveSpeed : moveSpeed * reverseSpeedMultiplier;
         Vector3 direction = moveInLocalForward ? transform.forward : Vector3.forward;
@@ -82,7 +92,7 @@ public sealed class SpotKinematicDrive : MonoBehaviour
         AnimateVisualRoot(forward, turn, dt);
     }
 
-    private void RotateWithNavMeshRestriction(float yawDegrees)
+    private void RotateWithNavMeshRestriction(float yawDegrees, float dt)
     {
         if (Mathf.Abs(yawDegrees) <= Mathf.Epsilon)
         {
@@ -101,22 +111,38 @@ public sealed class SpotKinematicDrive : MonoBehaviour
         if (pushAwayFromNavMeshEdgesOnYaw &&
             TryPushYawFootprintOnNavMesh(transform.position, currentRotation, targetRotation, out Vector3 pushedPosition))
         {
-            Vector3 smoothedPosition = SmoothYawPushPosition(transform.position, pushedPosition);
-            if (TryMoveFootprintOnNavMesh(
-                transform.position,
-                currentRotation,
-                smoothedPosition,
-                targetRotation,
-                out Vector3 constrainedPosition,
-                out _))
+            Vector3 push = Vector3.ProjectOnPlane(pushedPosition - transform.position, Vector3.up);
+            float maxDistance = Mathf.Max(0f, navMeshYawPushSpeed) * Mathf.Max(0f, dt);
+            float minDistance = Mathf.Max(0f, navMeshYawPushMinDistance);
+            if (push.sqrMagnitude >= minDistance * minDistance && maxDistance > 0f)
             {
-                transform.SetPositionAndRotation(constrainedPosition, targetRotation);
-            }
-            else
-            {
-                transform.SetPositionAndRotation(pushedPosition, targetRotation);
+                Vector3 clearanceMovement = Vector3.ClampMagnitude(push, maxDistance);
+                Vector3 clearanceTarget = transform.position + clearanceMovement;
+                if (TryConstrainToNavMesh(
+                    transform.position,
+                    currentRotation,
+                    clearanceTarget,
+                    clearanceMovement,
+                    out Vector3 constrainedPosition))
+                {
+                    transform.position = constrainedPosition;
+
+                    if (TryMoveFootprintOnNavMesh(
+                        constrainedPosition,
+                        currentRotation,
+                        constrainedPosition,
+                        targetRotation,
+                        out _,
+                        out _))
+                    {
+                        transform.rotation = targetRotation;
+                        return;
+                    }
+                }
             }
         }
+
+        IsSteppingInPlaceRequested = true;
     }
 
     private bool TryPushYawFootprintOnNavMesh(
@@ -163,18 +189,6 @@ public sealed class SpotKinematicDrive : MonoBehaviour
             out _);
     }
 
-    private Vector3 SmoothYawPushPosition(Vector3 currentPosition, Vector3 pushedPosition)
-    {
-        Vector3 push = pushedPosition - currentPosition;
-        float maxPushDistance = Mathf.Max(0.001f, navMeshYawPushMaxDistance);
-        if (push.magnitude > maxPushDistance)
-        {
-            push = push.normalized * maxPushDistance;
-        }
-
-        return currentPosition + push * Mathf.Clamp01(navMeshYawPushSmoothing);
-    }
-
     private void MoveWithNavMeshRestriction(Vector3 movement)
     {
         if (movement.sqrMagnitude <= Mathf.Epsilon)
@@ -216,6 +230,7 @@ public sealed class SpotKinematicDrive : MonoBehaviour
             out constrainedPosition,
             out Vector3 blockingNormal))
         {
+            RememberNavMeshMoveDirection(currentPosition, constrainedPosition);
             return true;
         }
 
@@ -224,19 +239,28 @@ public sealed class SpotKinematicDrive : MonoBehaviour
             return false;
         }
 
+        Vector3 bestPartialPosition = currentPosition;
+        float bestPartialDistanceSquared = 0f;
+        TryKeepFurthestValidPartialMove(
+            currentPosition,
+            currentRotation,
+            movement,
+            ref bestPartialPosition,
+            ref bestPartialDistanceSquared);
+
         Vector3 remainingMovement = movement;
         int iterations = Mathf.Max(1, navMeshSlideIterations);
         for (int i = 0; i < iterations; i++)
         {
             if (blockingNormal.sqrMagnitude <= Mathf.Epsilon)
             {
-                return false;
+                break;
             }
 
             Vector3 slideMovement = Vector3.ProjectOnPlane(remainingMovement, blockingNormal);
             if (slideMovement.sqrMagnitude < navMeshSlideMinDistance * navMeshSlideMinDistance)
             {
-                return false;
+                break;
             }
 
             Vector3 slideTarget = currentPosition + slideMovement;
@@ -248,13 +272,146 @@ public sealed class SpotKinematicDrive : MonoBehaviour
                 out constrainedPosition,
                 out blockingNormal))
             {
+                RememberNavMeshMoveDirection(currentPosition, constrainedPosition);
                 return true;
             }
 
+            TryKeepFurthestValidPartialMove(
+                currentPosition,
+                currentRotation,
+                slideMovement,
+                ref bestPartialPosition,
+                ref bestPartialDistanceSquared);
             remainingMovement = slideMovement;
         }
 
-        return false;
+        if (TryFindFanSlide(
+            currentPosition,
+            currentRotation,
+            movement,
+            out constrainedPosition))
+        {
+            RememberNavMeshMoveDirection(currentPosition, constrainedPosition);
+            return true;
+        }
+
+        if (bestPartialDistanceSquared < navMeshSlideMinDistance * navMeshSlideMinDistance)
+        {
+            return false;
+        }
+
+        constrainedPosition = bestPartialPosition;
+        RememberNavMeshMoveDirection(currentPosition, constrainedPosition);
+        return true;
+    }
+
+    private bool TryFindFanSlide(
+        Vector3 currentPosition,
+        Quaternion currentRotation,
+        Vector3 movement,
+        out Vector3 bestPosition)
+    {
+        bestPosition = currentPosition;
+        Vector3 planarMovement = Vector3.ProjectOnPlane(movement, Vector3.up);
+        float moveDistance = planarMovement.magnitude;
+        if (moveDistance < navMeshSlideMinDistance)
+        {
+            return false;
+        }
+
+        Vector3 desiredDirection = planarMovement / moveDistance;
+        Vector3 previousDirection = lastNavMeshMoveDirection.sqrMagnitude > Mathf.Epsilon
+            ? lastNavMeshMoveDirection.normalized
+            : Vector3.zero;
+        int samples = Mathf.Max(3, navMeshSlideDirectionSamples);
+        float searchAngle = Mathf.Clamp(navMeshSlideSearchAngle, 0f, 120f);
+        float bestScore = float.NegativeInfinity;
+        bool found = false;
+
+        for (int i = 0; i < samples; i++)
+        {
+            float sampleT = samples == 1 ? 0.5f : i / (float)(samples - 1);
+            float angle = Mathf.Lerp(-searchAngle, searchAngle, sampleT);
+            Vector3 candidateDirection = Quaternion.AngleAxis(angle, Vector3.up) * desiredDirection;
+            Vector3 candidateTarget = currentPosition + candidateDirection * moveDistance;
+            if (!TryMoveFootprintOnNavMesh(
+                currentPosition,
+                currentRotation,
+                candidateTarget,
+                currentRotation,
+                out Vector3 candidatePosition,
+                out _))
+            {
+                continue;
+            }
+
+            Vector3 displacement = Vector3.ProjectOnPlane(candidatePosition - currentPosition, Vector3.up);
+            float forwardProgress = Vector3.Dot(displacement, desiredDirection);
+            float continuity = previousDirection.sqrMagnitude > Mathf.Epsilon
+                ? Vector3.Dot(displacement, previousDirection) * navMeshSlideContinuityWeight
+                : 0f;
+            float score = forwardProgress + continuity + displacement.magnitude * 0.01f;
+            if (score <= bestScore)
+            {
+                continue;
+            }
+
+            bestScore = score;
+            bestPosition = candidatePosition;
+            found = true;
+        }
+
+        return found;
+    }
+
+    private void RememberNavMeshMoveDirection(Vector3 fromPosition, Vector3 toPosition)
+    {
+        Vector3 direction = Vector3.ProjectOnPlane(toPosition - fromPosition, Vector3.up);
+        if (direction.sqrMagnitude > Mathf.Epsilon)
+        {
+            lastNavMeshMoveDirection = direction.normalized;
+        }
+    }
+
+    private void TryKeepFurthestValidPartialMove(
+        Vector3 currentPosition,
+        Quaternion currentRotation,
+        Vector3 movement,
+        ref Vector3 bestPosition,
+        ref float bestDistanceSquared)
+    {
+        float validFraction = 0f;
+        float invalidFraction = 1f;
+        Vector3 validPosition = currentPosition;
+        int iterations = Mathf.Max(1, navMeshPartialMoveIterations);
+
+        for (int i = 0; i < iterations; i++)
+        {
+            float candidateFraction = (validFraction + invalidFraction) * 0.5f;
+            Vector3 candidateTarget = currentPosition + movement * candidateFraction;
+            if (TryMoveFootprintOnNavMesh(
+                currentPosition,
+                currentRotation,
+                candidateTarget,
+                currentRotation,
+                out Vector3 candidatePosition,
+                out _))
+            {
+                validFraction = candidateFraction;
+                validPosition = candidatePosition;
+            }
+            else
+            {
+                invalidFraction = candidateFraction;
+            }
+        }
+
+        float distanceSquared = (validPosition - currentPosition).sqrMagnitude;
+        if (distanceSquared > bestDistanceSquared)
+        {
+            bestPosition = validPosition;
+            bestDistanceSquared = distanceSquared;
+        }
     }
 
     private bool TryMoveFootprintOnNavMesh(
@@ -323,7 +480,11 @@ public sealed class SpotKinematicDrive : MonoBehaviour
 
         if (!NavMesh.SamplePosition(targetProbe, out NavMeshHit targetHit, navMeshSampleDistance, navMeshAreaMask))
         {
-            if (NavMesh.FindClosestEdge(currentHit.position, out NavMeshHit edgeHit, navMeshAreaMask))
+            if (NavMesh.Raycast(currentHit.position, targetProbe, out NavMeshHit targetRayHit, navMeshAreaMask))
+            {
+                blockingNormal = targetRayHit.normal;
+            }
+            else if (NavMesh.FindClosestEdge(currentHit.position, out NavMeshHit edgeHit, navMeshAreaMask))
             {
                 blockingNormal = edgeHit.normal;
             }
@@ -331,7 +492,24 @@ public sealed class SpotKinematicDrive : MonoBehaviour
             return false;
         }
 
-        if (NavMesh.Raycast(currentHit.position, targetHit.position, out NavMeshHit raycastHit, navMeshAreaMask))
+        Vector3 horizontalSnap = Vector3.ProjectOnPlane(targetHit.position - targetProbe, Vector3.up);
+        float horizontalTolerance = Mathf.Max(0f, navMeshProbeHorizontalTolerance);
+        if (horizontalSnap.sqrMagnitude > horizontalTolerance * horizontalTolerance)
+        {
+            blockingNormal = horizontalSnap.normalized;
+            return false;
+        }
+
+        Vector3 rayStart = currentHit.position;
+        Vector3 rayDelta = targetHit.position - rayStart;
+        float rayDistance = rayDelta.magnitude;
+        if (rayDistance > Mathf.Epsilon)
+        {
+            float inset = Mathf.Min(Mathf.Max(0f, navMeshRaycastStartInset), rayDistance * 0.25f);
+            rayStart += rayDelta / rayDistance * inset;
+        }
+
+        if (NavMesh.Raycast(rayStart, targetHit.position, out NavMeshHit raycastHit, navMeshAreaMask))
         {
             blockingNormal = raycastHit.normal;
             return false;

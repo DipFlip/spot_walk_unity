@@ -113,6 +113,7 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     private bool hasBasePose;
     private bool hasBodyBasePose;
     private bool hasSnappedRootHeightOnStart;
+    private SpotKinematicDrive kinematicDrive;
     private readonly RaycastHit[] groundHits = new RaycastHit[32];
 
     private void Awake()
@@ -172,7 +173,9 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         turnVelocity = turnDelta / dt;
         signedTurnVelocity = GetSignedYawDelta(previousRotation, transform.rotation) / dt;
 
-        bool isMoving = positionDelta.sqrMagnitude > movementThreshold * movementThreshold || turnDelta > turnThresholdDegrees;
+        bool isMoving = positionDelta.sqrMagnitude > movementThreshold * movementThreshold ||
+            turnDelta > turnThresholdDegrees ||
+            (kinematicDrive != null && kinematicDrive.IsSteppingInPlaceRequested);
         motionBlend = Mathf.MoveTowards(motionBlend, isMoving ? 1f : 0f, returnToStandSpeed * dt);
         stepBlend = isMoving ? 1f : Mathf.MoveTowards(stepBlend, 0f, returnToStandSpeed * dt);
 
@@ -201,6 +204,7 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         }
 
         MigrateOldSerializedValues();
+        kinematicDrive = GetComponent<SpotKinematicDrive>();
         BindLegs();
         PoseNeutral();
         CacheHomeFeet();
