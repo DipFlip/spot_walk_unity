@@ -1,0 +1,464 @@
+using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+using UnityEngine;
+
+[DisallowMultipleComponent]
+[RequireComponent(typeof(SpotKinematicDrive))]
+public sealed class SpotRosTcpBridge : MonoBehaviour
+{
+    [Serializable]
+    private sealed class BridgeMessage
+    {
+        public string type;
+        public string id;
+        public string command;
+        public bool success;
+        public bool has_lease;
+        public bool powered_on;
+        public bool standing;
+        public string message;
+        public float vx;
+        public float vy;
+        public float wz;
+        public float x;
+        public float y;
+        public float z;
+        public float yaw;
+    }
+
+    [Header("Bridge")]
+    [SerializeField] private string host = "127.0.0.1";
+    [SerializeField] private int port = 50052;
+    [SerializeField, Min(0.1f)] private float reconnectDelaySeconds = 2f;
+    [SerializeField, Range(1f, 100f)] private float poseRateHz = 30f;
+    [SerializeField, Min(0.05f)] private float velocityCommandTimeoutSeconds = 0.35f;
+
+    [Header("Initial Robot State")]
+    [SerializeField] private bool initiallyPoweredOn;
+    [SerializeField] private bool initiallyStanding;
+
+    [Header("Diagnostics")]
+    [SerializeField] private bool logConnectionChanges = true;
+
+    private readonly ConcurrentQueue<string> inboundMessages = new ConcurrentQueue<string>();
+    private readonly object socketLock = new object();
+    private readonly object writerLock = new object();
+    private readonly ManualResetEvent stopRequested = new ManualResetEvent(false);
+
+    private SpotKinematicDrive drive;
+    private SpotProceduralTrot proceduralTrot;
+    private TcpClient activeClient;
+    private StreamWriter activeWriter;
+    private Thread networkThread;
+    private Vector3 initialPosition;
+    private Quaternion initialRotation;
+    private Vector3 previousPosition;
+    private Quaternion previousRotation;
+    private float previousPoseTime;
+    private float nextPoseTime;
+    private float lastVelocityCommandTime = float.NegativeInfinity;
+    private bool hasLease;
+    private bool poweredOn;
+    private bool standing;
+    private int connectionState;
+    private int reportedConnectionState = int.MinValue;
+
+    public bool IsConnected => Volatile.Read(ref connectionState) == 1;
+    public bool HasLease => hasLease;
+    public bool IsPoweredOn => poweredOn;
+    public bool IsStanding => standing;
+
+    private void Awake()
+    {
+        drive = GetComponent<SpotKinematicDrive>();
+        proceduralTrot = GetComponent<SpotProceduralTrot>();
+    }
+
+    private void OnEnable()
+    {
+        poseRateHz = Mathf.Clamp(poseRateHz, 1f, 100f);
+        velocityCommandTimeoutSeconds = Mathf.Max(0.05f, velocityCommandTimeoutSeconds);
+        initialPosition = transform.position;
+        initialRotation = transform.rotation;
+        previousPosition = initialPosition;
+        previousRotation = initialRotation;
+        previousPoseTime = Time.unscaledTime;
+        nextPoseTime = previousPoseTime;
+        hasLease = false;
+        poweredOn = initiallyPoweredOn;
+        standing = initiallyStanding && poweredOn;
+        drive.SetExternalControlEnabled(false);
+        RefreshMotionState();
+        proceduralTrot?.SetSitting(!standing);
+
+        stopRequested.Reset();
+        Volatile.Write(ref connectionState, 0);
+        networkThread = new Thread(NetworkLoop)
+        {
+            IsBackground = true,
+            Name = "Spot ROS control TCP client"
+        };
+        networkThread.Start();
+    }
+
+    private void Update()
+    {
+        ReportConnectionChange();
+        while (inboundMessages.TryDequeue(out string json))
+        {
+            HandleMessage(json);
+        }
+
+        if (Time.unscaledTime - lastVelocityCommandTime > velocityCommandTimeoutSeconds)
+        {
+            drive.SetExternalControlEnabled(false);
+        }
+
+        if (Time.unscaledTime >= nextPoseTime)
+        {
+            PublishPose();
+            nextPoseTime = Time.unscaledTime + 1f / poseRateHz;
+        }
+    }
+
+    private void HandleMessage(string json)
+    {
+        BridgeMessage request;
+        try
+        {
+            request = JsonUtility.FromJson<BridgeMessage>(json);
+        }
+        catch (ArgumentException error)
+        {
+            Debug.LogWarning($"Ignoring malformed ROS bridge message: {error.Message}", this);
+            return;
+        }
+
+        if (request == null)
+        {
+            return;
+        }
+
+        if (request.type == "velocity")
+        {
+            ApplyVelocity(request.vx, request.vy, request.wz);
+            return;
+        }
+
+        if (request.type == "command")
+        {
+            HandleCommand(request);
+        }
+    }
+
+    private void ApplyVelocity(float forward, float left, float yaw)
+    {
+        lastVelocityCommandTime = Time.unscaledTime;
+        if (!hasLease || !poweredOn || !standing)
+        {
+            drive.SetExternalControlEnabled(false);
+            return;
+        }
+
+        drive.SetExternalVelocity(forward, left, yaw);
+    }
+
+    private void HandleCommand(BridgeMessage request)
+    {
+        bool success = ExecuteStateCommand(request.command, out string responseMessage);
+
+        Send(new BridgeMessage
+        {
+            type = "response",
+            id = request.id,
+            command = request.command,
+            success = success,
+            message = responseMessage
+        });
+    }
+
+    public bool ClaimLease(out string message)
+    {
+        return ExecuteStateCommand("claim", out message);
+    }
+
+    public bool ReleaseLease(out string message)
+    {
+        return ExecuteStateCommand("release", out message);
+    }
+
+    public bool PowerOn(out string message)
+    {
+        return ExecuteStateCommand("power_on", out message);
+    }
+
+    public bool Stand(out string message)
+    {
+        return ExecuteStateCommand("stand", out message);
+    }
+
+    public bool Sit(out string message)
+    {
+        return ExecuteStateCommand("sit", out message);
+    }
+
+    private bool ExecuteStateCommand(string command, out string responseMessage)
+    {
+        bool success;
+        switch (command)
+        {
+            case "claim":
+                hasLease = true;
+                success = true;
+                responseMessage = "Lease acquired";
+                break;
+            case "release":
+                hasLease = false;
+                StopMotion();
+                success = true;
+                responseMessage = "Lease released";
+                break;
+            case "power_on":
+                success = hasLease;
+                poweredOn = success || poweredOn;
+                responseMessage = success ? "Motors powered on" : "Claim the lease before powering on";
+                break;
+            case "power_off":
+                success = hasLease;
+                if (success)
+                {
+                    poweredOn = false;
+                    standing = false;
+                    StopMotion();
+                    proceduralTrot?.SetSitting(true);
+                }
+                responseMessage = success ? "Motors powered off" : "Claim the lease before powering off";
+                break;
+            case "stand":
+                success = hasLease && poweredOn;
+                if (success)
+                {
+                    standing = true;
+                    proceduralTrot?.SetSitting(false);
+                }
+                responseMessage = success ? "Robot standing" : "A lease and motor power are required to stand";
+                break;
+            case "sit":
+                success = hasLease && poweredOn;
+                if (success)
+                {
+                    standing = false;
+                    StopMotion();
+                    proceduralTrot?.SetSitting(true);
+                }
+                responseMessage = success ? "Robot sitting" : "A lease and motor power are required to sit";
+                break;
+            case "stop":
+                success = hasLease;
+                StopMotion();
+                responseMessage = success ? "Robot stopped" : "Claim the lease before stopping";
+                break;
+            default:
+                success = false;
+                responseMessage = $"Unsupported command: {command}";
+                break;
+        }
+
+        RefreshMotionState();
+        return success;
+    }
+
+    private void StopMotion()
+    {
+        lastVelocityCommandTime = float.NegativeInfinity;
+        drive.SetExternalControlEnabled(false);
+    }
+
+    private void RefreshMotionState()
+    {
+        drive.SetMovementEnabled(hasLease && poweredOn && standing);
+    }
+
+    private void PublishPose()
+    {
+        float now = Time.unscaledTime;
+        float dt = Mathf.Max(now - previousPoseTime, 0.0001f);
+        Vector3 relativePosition = Quaternion.Inverse(initialRotation) * (transform.position - initialPosition);
+        Quaternion relativeRotation = Quaternion.Inverse(initialRotation) * transform.rotation;
+        float unityYaw = Vector3.SignedAngle(Vector3.forward, relativeRotation * Vector3.forward, Vector3.up);
+
+        Vector3 worldVelocity = (transform.position - previousPosition) / dt;
+        Vector3 bodyVelocity = Quaternion.Inverse(transform.rotation) * worldVelocity;
+        float unityYawRate = Vector3.SignedAngle(
+            previousRotation * Vector3.forward,
+            transform.rotation * Vector3.forward,
+            Vector3.up) * Mathf.Deg2Rad / dt;
+
+        Send(new BridgeMessage
+        {
+            type = "pose",
+            x = relativePosition.z,
+            y = -relativePosition.x,
+            z = relativePosition.y,
+            yaw = -unityYaw * Mathf.Deg2Rad,
+            vx = bodyVelocity.z,
+            vy = -bodyVelocity.x,
+            wz = -unityYawRate,
+            has_lease = hasLease,
+            powered_on = poweredOn,
+            standing = this.standing
+        });
+
+        previousPosition = transform.position;
+        previousRotation = transform.rotation;
+        previousPoseTime = now;
+    }
+
+    private void NetworkLoop()
+    {
+        while (!stopRequested.WaitOne(0))
+        {
+            try
+            {
+                using (var client = new TcpClient())
+                {
+                    client.NoDelay = true;
+                    lock (socketLock)
+                    {
+                        activeClient = client;
+                    }
+                    client.Connect(host, port);
+
+                    using (NetworkStream stream = client.GetStream())
+                    using (var reader = new StreamReader(stream, Encoding.UTF8, false, 4096, true))
+                    using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 4096, true) { AutoFlush = true })
+                    {
+                        lock (writerLock)
+                        {
+                            activeWriter = writer;
+                        }
+                        Volatile.Write(ref connectionState, 1);
+
+                        while (!stopRequested.WaitOne(0))
+                        {
+                            string line = reader.ReadLine();
+                            if (line == null)
+                            {
+                                break;
+                            }
+                            inboundMessages.Enqueue(line);
+                        }
+                    }
+                }
+            }
+            catch (SocketException)
+            {
+                Volatile.Write(ref connectionState, 0);
+            }
+            catch (IOException)
+            {
+                Volatile.Write(ref connectionState, 0);
+            }
+            catch (ObjectDisposedException)
+            {
+                Volatile.Write(ref connectionState, 0);
+            }
+            finally
+            {
+                lock (writerLock)
+                {
+                    activeWriter = null;
+                }
+                lock (socketLock)
+                {
+                    activeClient = null;
+                }
+                Volatile.Write(ref connectionState, 0);
+            }
+
+            stopRequested.WaitOne(TimeSpan.FromSeconds(reconnectDelaySeconds));
+        }
+    }
+
+    private void Send(BridgeMessage message)
+    {
+        string json = JsonUtility.ToJson(message);
+        lock (writerLock)
+        {
+            if (activeWriter == null)
+            {
+                return;
+            }
+
+            try
+            {
+                activeWriter.WriteLine(json);
+            }
+            catch (IOException)
+            {
+                Volatile.Write(ref connectionState, 0);
+            }
+            catch (ObjectDisposedException)
+            {
+                Volatile.Write(ref connectionState, 0);
+            }
+        }
+    }
+
+    private void ReportConnectionChange()
+    {
+        int currentState = Volatile.Read(ref connectionState);
+        if (currentState == reportedConnectionState)
+        {
+            return;
+        }
+
+        reportedConnectionState = currentState;
+        if (currentState != 1)
+        {
+            hasLease = false;
+            StopMotion();
+            RefreshMotionState();
+        }
+
+        if (!logConnectionChanges)
+        {
+            return;
+        }
+
+        if (currentState == 1)
+        {
+            Debug.Log($"Spot ROS control connected to {host}:{port}.", this);
+        }
+        else
+        {
+            Debug.LogWarning($"Spot ROS control waiting for TCP bridge at {host}:{port}.", this);
+        }
+    }
+
+    private void OnDisable()
+    {
+        stopRequested.Set();
+        lock (socketLock)
+        {
+            activeClient?.Close();
+        }
+        if (networkThread != null && networkThread.IsAlive)
+        {
+            networkThread.Join(2000);
+        }
+        networkThread = null;
+        StopMotion();
+        drive.SetMovementEnabled(true);
+        Volatile.Write(ref connectionState, -1);
+    }
+
+    private void OnDestroy()
+    {
+        stopRequested.Dispose();
+    }
+}

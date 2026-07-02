@@ -4232,6 +4232,7 @@ GameObject:
   - component: {fileID: 6418165443977700739}
   - component: {fileID: 1318807823933399356}
   - component: {fileID: 6229045657887483189}
+  - component: {fileID: 7782394057281946312}
   m_Layer: 0
   m_Name: spot_ik
   m_TagString: robot
@@ -4338,6 +4339,8 @@ MonoBehaviour:
   bodyHeightFollowSpeed: 8
   terrainTiltDegrees: 10
   terrainTiltFollowSpeed: 8
+  sitBodyDrop: 0.28
+  sitTransitionSpeed: 3
   previewInEditMode: 1
   snapRootHeightInEditMode: 0
   snapRootHeightOnStart: 0
@@ -4375,6 +4378,26 @@ MonoBehaviour:
     lowerLegName: hl_lleg
     diagonalGroup: 1
     sideSign: 1
+--- !u!114 &7782394057281946312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8441865444752825992}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d72c5dd01a944679183179c53973511, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::SpotRosTcpBridge
+  host: 127.0.0.1
+  port: 50052
+  reconnectDelaySeconds: 2
+  poseRateHz: 30
+  velocityCommandTimeoutSeconds: 0.35
+  initiallyPoweredOn: 0
+  initiallyStanding: 0
+  logConnectionChanges: 1
 --- !u!1 &8627460002603940581
 GameObject:
   m_ObjectHideFlags: 0

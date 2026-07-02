@@ -66,6 +66,10 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     [SerializeField] private float terrainTiltDegrees = 10f;
     [SerializeField] private float terrainTiltFollowSpeed = 8f;
 
+    [Header("Sit / Stand")]
+    [SerializeField] private float sitBodyDrop = 0.28f;
+    [SerializeField] private float sitTransitionSpeed = 3f;
+
     [Header("Terrain Contact")]
     [SerializeField] private bool previewInEditMode = true;
     [SerializeField] private bool snapRootHeightInEditMode;
@@ -113,8 +117,15 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     private bool hasBasePose;
     private bool hasBodyBasePose;
     private bool hasSnappedRootHeightOnStart;
+    private bool sittingRequested;
+    private float sitBlend;
     private SpotKinematicDrive kinematicDrive;
     private readonly RaycastHit[] groundHits = new RaycastHit[32];
+
+    public void SetSitting(bool sitting)
+    {
+        sittingRequested = sitting;
+    }
 
     private void Awake()
     {
@@ -167,6 +178,7 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         }
 
         float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+        sitBlend = Mathf.MoveTowards(sitBlend, sittingRequested ? 1f : 0f, sitTransitionSpeed * dt);
         Vector3 positionDelta = transform.position - previousPosition;
         float turnDelta = Quaternion.Angle(transform.rotation, previousRotation);
         velocityWorld = positionDelta / dt;
@@ -622,7 +634,7 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         {
             float bodyT = snap ? 1f : 1f - Mathf.Exp(-bodyHeightFollowSpeed * dt);
             float tiltT = snap ? 1f : 1f - Mathf.Exp(-terrainTiltFollowSpeed * dt);
-            bodyHeightOffset = Mathf.Lerp(bodyHeightOffset, 0f, bodyT);
+            bodyHeightOffset = Mathf.Lerp(bodyHeightOffset, -sitBodyDrop * sitBlend, bodyT);
             terrainPitch = Mathf.Lerp(terrainPitch, 0f, tiltT);
             terrainRoll = Mathf.Lerp(terrainRoll, 0f, tiltT);
             return;
@@ -651,7 +663,7 @@ public sealed class SpotProceduralTrot : MonoBehaviour
             ? bodyLink.parent.TransformPoint(bodyBaseLocalPosition).y
             : transform.position.y;
         float currentClearance = baseBodyHeight - averageFootHeight;
-        float targetOffset = bodyHeightOverFeet - currentClearance;
+        float targetOffset = bodyHeightOverFeet - currentClearance - sitBodyDrop * sitBlend;
         float bodyFollowT = snap ? 1f : 1f - Mathf.Exp(-bodyHeightFollowSpeed * dt);
         bodyHeightOffset = Mathf.Lerp(bodyHeightOffset, targetOffset, bodyFollowT);
 

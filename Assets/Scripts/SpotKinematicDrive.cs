@@ -50,8 +50,41 @@ public sealed class SpotKinematicDrive : MonoBehaviour
     private Quaternion visualBaseLocalRotation;
     private float gaitTime;
     private Vector3 lastNavMeshMoveDirection;
+    private bool externalControlEnabled;
+    private float externalForwardVelocity;
+    private float externalLeftVelocity;
+    private float externalYawVelocity;
+    private bool movementEnabled = true;
 
     public bool IsSteppingInPlaceRequested { get; private set; }
+
+    public void SetExternalControlEnabled(bool enabled)
+    {
+        externalControlEnabled = enabled;
+        if (!enabled)
+        {
+            externalForwardVelocity = 0f;
+            externalLeftVelocity = 0f;
+            externalYawVelocity = 0f;
+        }
+    }
+
+    public void SetMovementEnabled(bool enabled)
+    {
+        movementEnabled = enabled;
+        if (!enabled)
+        {
+            SetExternalControlEnabled(false);
+        }
+    }
+
+    public void SetExternalVelocity(float forwardMetersPerSecond, float leftMetersPerSecond, float yawRadiansPerSecond)
+    {
+        externalControlEnabled = true;
+        externalForwardVelocity = forwardMetersPerSecond;
+        externalLeftVelocity = leftMetersPerSecond;
+        externalYawVelocity = yawRadiansPerSecond;
+    }
 
     private void Awake()
     {
@@ -74,22 +107,53 @@ public sealed class SpotKinematicDrive : MonoBehaviour
 
     private void Update()
     {
-        Vector2 input = ReadMoveInput();
-        float forward = Mathf.Clamp(input.y, -1f, 1f);
-        float turn = Mathf.Clamp(input.x, -1f, 1f);
-        float strafe = Mathf.Clamp(ReadStrafeInput(), -1f, 1f);
-
         float dt = Time.deltaTime;
         IsSteppingInPlaceRequested = false;
-        RotateWithNavMeshRestriction(turn * turnSpeedDegrees * dt, dt);
 
-        float speed = forward >= 0f ? moveSpeed : moveSpeed * reverseSpeedMultiplier;
+        if (!movementEnabled)
+        {
+            AnimateVisualRoot(0f, 0f, dt);
+            return;
+        }
+
+        float forwardVelocity;
+        float leftVelocity;
+        float yawRadiansPerSecond;
+        float animationForward;
+        float animationTurn;
+        if (externalControlEnabled)
+        {
+            forwardVelocity = externalForwardVelocity;
+            leftVelocity = externalLeftVelocity;
+            yawRadiansPerSecond = externalYawVelocity;
+            animationForward = moveSpeed > Mathf.Epsilon ? Mathf.Clamp(forwardVelocity / moveSpeed, -1f, 1f) : 0f;
+            animationTurn = turnSpeedDegrees > Mathf.Epsilon
+                ? Mathf.Clamp(-yawRadiansPerSecond * Mathf.Rad2Deg / turnSpeedDegrees, -1f, 1f)
+                : 0f;
+        }
+        else
+        {
+            Vector2 input = ReadMoveInput();
+            float forward = Mathf.Clamp(input.y, -1f, 1f);
+            float strafe = Mathf.Clamp(ReadStrafeInput(), -1f, 1f);
+            float turn = Mathf.Clamp(input.x, -1f, 1f);
+            float speed = forward >= 0f ? moveSpeed : moveSpeed * reverseSpeedMultiplier;
+            forwardVelocity = forward * speed;
+            leftVelocity = -strafe * moveSpeed;
+            yawRadiansPerSecond = -turn * turnSpeedDegrees * Mathf.Deg2Rad;
+            animationForward = forward;
+            animationTurn = turn;
+        }
+
+        // ROS REP-103 uses positive yaw to the left. Unity's positive Y rotation turns right.
+        RotateWithNavMeshRestriction(-yawRadiansPerSecond * Mathf.Rad2Deg * dt, dt);
+
         Vector3 direction = moveInLocalForward ? transform.forward : Vector3.forward;
-        Vector3 movement = direction * (forward * speed * dt);
-        movement += transform.right * (strafe * moveSpeed * dt);
+        Vector3 movement = direction * (forwardVelocity * dt);
+        movement -= transform.right * (leftVelocity * dt);
         MoveWithNavMeshRestriction(movement);
 
-        AnimateVisualRoot(forward, turn, dt);
+        AnimateVisualRoot(animationForward, animationTurn, dt);
     }
 
     private void RotateWithNavMeshRestriction(float yawDegrees, float dt)
