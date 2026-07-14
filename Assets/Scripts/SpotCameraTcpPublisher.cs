@@ -16,7 +16,7 @@ public sealed class SpotCameraTcpPublisher : MonoBehaviour
     [Header("Image")]
     [SerializeField, Min(16)] private int width = 640;
     [SerializeField, Min(16)] private int height = 480;
-    [SerializeField, Range(1f, 30f)] private float framesPerSecond = 10f;
+    [SerializeField, Range(1f, 30f)] private float framesPerSecond = 5f;
     [SerializeField, Range(1, 100)] private int jpegQuality = 75;
 
     [Header("Diagnostics")]

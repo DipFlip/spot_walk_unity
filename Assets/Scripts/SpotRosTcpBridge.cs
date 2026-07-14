@@ -60,6 +60,9 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
     [SerializeField, Range(1f, 100f)] private float poseRateHz = 30f;
     [SerializeField, Min(0.05f)] private float velocityCommandTimeoutSeconds = 0.35f;
 
+    [Header("Runtime")]
+    [SerializeField, Range(15, 240)] private int targetFrameRate = 60;
+
     [Header("Initial Robot State")]
     [SerializeField] private bool initiallyPoweredOn;
     [SerializeField] private bool initiallyStanding;
@@ -89,6 +92,7 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
     private bool standing;
     private int connectionState;
     private int reportedConnectionState = int.MinValue;
+    private int previousTargetFrameRate;
 
     public bool IsConnected => Volatile.Read(ref connectionState) == 1;
     public bool HasLease => hasLease;
@@ -105,6 +109,9 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
     {
         poseRateHz = Mathf.Clamp(poseRateHz, 1f, 100f);
         velocityCommandTimeoutSeconds = Mathf.Max(0.05f, velocityCommandTimeoutSeconds);
+        targetFrameRate = Mathf.Clamp(targetFrameRate, 15, 240);
+        previousTargetFrameRate = Application.targetFrameRate;
+        Application.targetFrameRate = targetFrameRate;
         initialPosition = transform.position;
         initialRotation = transform.rotation;
         previousPosition = initialPosition;
@@ -563,6 +570,7 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         networkThread = null;
         StopMotion();
         drive.SetMovementEnabled(true);
+        Application.targetFrameRate = previousTargetFrameRate;
         Volatile.Write(ref connectionState, -1);
     }
 

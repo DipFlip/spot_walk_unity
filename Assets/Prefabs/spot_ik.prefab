@@ -4393,8 +4393,9 @@ MonoBehaviour:
   host: 127.0.0.1
   port: 50052
   reconnectDelaySeconds: 2
-  poseRateHz: 30
+  poseRateHz: 20
   velocityCommandTimeoutSeconds: 0.35
+  targetFrameRate: 60
   initiallyPoweredOn: 0
   initiallyStanding: 0
   logConnectionChanges: 1
