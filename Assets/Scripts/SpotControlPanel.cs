@@ -13,6 +13,11 @@ public sealed class SpotControlPanel : MonoBehaviour
     [SerializeField] private Button sitButton;
     [SerializeField] private TMP_Text statusText;
 
+    private TMP_Text claimButtonText;
+    private TMP_Text releaseButtonText;
+    private TMP_Text powerOnButtonText;
+    private TMP_Text standButtonText;
+    private TMP_Text sitButtonText;
     private string lastAction = "Use the controls below, then drive with WASD and Q/E.";
 
     private void Awake()
@@ -40,6 +45,11 @@ public sealed class SpotControlPanel : MonoBehaviour
         WireButton(powerOnButton, PowerOn);
         WireButton(standButton, Stand);
         WireButton(sitButton, Sit);
+        claimButtonText = claimButton.GetComponentInChildren<TMP_Text>(true);
+        releaseButtonText = releaseButton.GetComponentInChildren<TMP_Text>(true);
+        powerOnButtonText = powerOnButton.GetComponentInChildren<TMP_Text>(true);
+        standButtonText = standButton.GetComponentInChildren<TMP_Text>(true);
+        sitButtonText = sitButton.GetComponentInChildren<TMP_Text>(true);
         Refresh();
     }
 
@@ -90,10 +100,24 @@ public sealed class SpotControlPanel : MonoBehaviour
         standButton.interactable = spot.HasLease && spot.IsPoweredOn && !spot.IsStanding;
         sitButton.interactable = spot.HasLease && spot.IsPoweredOn && spot.IsStanding;
 
+        SetText(claimButtonText, spot.HasLease ? "Lease Held" : "Take Lease");
+        SetText(releaseButtonText, spot.HasLease ? "Release Lease" : "No Lease");
+        SetText(powerOnButtonText, spot.IsPoweredOn ? "Powered On" : "Power On");
+        SetText(standButtonText, spot.IsStanding ? "Standing" : "Stand");
+        SetText(sitButtonText, spot.IsStanding ? "Sit" : "Sitting");
+
         string connection = spot.IsConnected ? "ROS connected" : "ROS waiting";
         string lease = spot.HasLease ? "leased" : "no lease";
         string power = spot.IsPoweredOn ? "powered" : "off";
         string posture = spot.IsStanding ? "standing" : "sitting";
         statusText.text = $"{connection} | {lease} | {power} | {posture}\n{lastAction}\nDrive: W/S forward, A/D yaw, Q/E strafe";
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+        {
+            text.text = value;
+        }
     }
 }
