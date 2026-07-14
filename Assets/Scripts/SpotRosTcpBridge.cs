@@ -28,6 +28,29 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         public float y;
         public float z;
         public float yaw;
+        public float qx;
+        public float qy;
+        public float qz;
+        public float qw;
+        public float vision_x;
+        public float vision_y;
+        public float vision_z;
+        public float vision_qx;
+        public float vision_qy;
+        public float vision_qz;
+        public float vision_qw;
+    }
+
+    private struct RosPose
+    {
+        public readonly Vector3 Position;
+        public readonly Quaternion Rotation;
+
+        public RosPose(Vector3 position, Quaternion rotation)
+        {
+            Position = position;
+            Rotation = rotation;
+        }
     }
 
     [Header("Bridge")]
@@ -290,6 +313,7 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         Vector3 relativePosition = Quaternion.Inverse(initialRotation) * (transform.position - initialPosition);
         Quaternion relativeRotation = Quaternion.Inverse(initialRotation) * transform.rotation;
         float unityYaw = Vector3.SignedAngle(Vector3.forward, relativeRotation * Vector3.forward, Vector3.up);
+        RosPose bodyPose = ToRosPose(relativePosition, relativeRotation);
 
         Vector3 worldVelocity = (transform.position - previousPosition) / dt;
         Vector3 bodyVelocity = Quaternion.Inverse(transform.rotation) * worldVelocity;
@@ -301,10 +325,21 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         Send(new BridgeMessage
         {
             type = "pose",
-            x = relativePosition.z,
-            y = -relativePosition.x,
-            z = relativePosition.y,
+            x = bodyPose.Position.x,
+            y = bodyPose.Position.y,
+            z = bodyPose.Position.z,
             yaw = -unityYaw * Mathf.Deg2Rad,
+            qx = bodyPose.Rotation.x,
+            qy = bodyPose.Rotation.y,
+            qz = bodyPose.Rotation.z,
+            qw = bodyPose.Rotation.w,
+            vision_x = 0f,
+            vision_y = 0f,
+            vision_z = 0f,
+            vision_qx = 0f,
+            vision_qy = 0f,
+            vision_qz = 0f,
+            vision_qw = 1f,
             vx = bodyVelocity.z,
             vy = -bodyVelocity.x,
             wz = -unityYawRate,
@@ -316,6 +351,80 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         previousPosition = transform.position;
         previousRotation = transform.rotation;
         previousPoseTime = now;
+    }
+
+    private static RosPose ToRosPose(Vector3 unityPosition, Quaternion unityRotation)
+    {
+        Vector3 rosPosition = UnityVectorToRos(unityPosition);
+        Vector3 rosForward = UnityVectorToRos(unityRotation * Vector3.forward);
+        Vector3 rosLeft = UnityVectorToRos(unityRotation * Vector3.left);
+        Vector3 rosUp = UnityVectorToRos(unityRotation * Vector3.up);
+        Quaternion rosRotation = QuaternionFromAxes(rosForward, rosLeft, rosUp);
+        return new RosPose(rosPosition, rosRotation);
+    }
+
+    private static Vector3 UnityVectorToRos(Vector3 unityVector)
+    {
+        return new Vector3(unityVector.z, -unityVector.x, unityVector.y);
+    }
+
+    private static Quaternion QuaternionFromAxes(Vector3 xAxis, Vector3 yAxis, Vector3 zAxis)
+    {
+        xAxis.Normalize();
+        yAxis.Normalize();
+        zAxis.Normalize();
+
+        float m00 = xAxis.x;
+        float m01 = yAxis.x;
+        float m02 = zAxis.x;
+        float m10 = xAxis.y;
+        float m11 = yAxis.y;
+        float m12 = zAxis.y;
+        float m20 = xAxis.z;
+        float m21 = yAxis.z;
+        float m22 = zAxis.z;
+        float trace = m00 + m11 + m22;
+
+        Quaternion q;
+        if (trace > 0f)
+        {
+            float s = Mathf.Sqrt(trace + 1f) * 2f;
+            q = new Quaternion(
+                (m21 - m12) / s,
+                (m02 - m20) / s,
+                (m10 - m01) / s,
+                0.25f * s);
+        }
+        else if (m00 > m11 && m00 > m22)
+        {
+            float s = Mathf.Sqrt(1f + m00 - m11 - m22) * 2f;
+            q = new Quaternion(
+                0.25f * s,
+                (m01 + m10) / s,
+                (m02 + m20) / s,
+                (m21 - m12) / s);
+        }
+        else if (m11 > m22)
+        {
+            float s = Mathf.Sqrt(1f + m11 - m00 - m22) * 2f;
+            q = new Quaternion(
+                (m01 + m10) / s,
+                0.25f * s,
+                (m12 + m21) / s,
+                (m02 - m20) / s);
+        }
+        else
+        {
+            float s = Mathf.Sqrt(1f + m22 - m00 - m11) * 2f;
+            q = new Quaternion(
+                (m02 + m20) / s,
+                (m12 + m21) / s,
+                0.25f * s,
+                (m10 - m01) / s);
+        }
+
+        q.Normalize();
+        return q;
     }
 
     private void NetworkLoop()

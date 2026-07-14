@@ -9476,7 +9476,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9579,7 +9579,7 @@ GameObject:
   - component: {fileID: 421587091}
   - component: {fileID: 421587090}
   m_Layer: 5
-  m_Name: Button
+  m_Name: ButtonTakeLease
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9603,7 +9603,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 20, y: -20}
-  m_SizeDelta: {x: 180, y: 40}
+  m_SizeDelta: {x: 131.8, y: 40}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &421587090
 MonoBehaviour:
@@ -9615,7 +9615,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -9659,7 +9659,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -12194,7 +12194,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -12238,7 +12238,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -12284,7 +12284,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 20, y: -220}
-  m_SizeDelta: {x: 180, y: 40}
+  m_SizeDelta: {x: 52.1, y: 40}
   m_Pivot: {x: 0, y: 1}
 --- !u!1001 &582772407
 PrefabInstance:
@@ -14197,7 +14197,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -14241,7 +14241,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -14287,7 +14287,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 20, y: -70}
-  m_SizeDelta: {x: 180, y: 40}
+  m_SizeDelta: {x: 160, y: 40}
   m_Pivot: {x: 0, y: 1}
 --- !u!1001 &668903979
 PrefabInstance:
@@ -15576,7 +15576,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -16692,7 +16692,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
   m_IgnoreReversedGraphics: 1
   m_BlockingObjects: 0
@@ -16709,7 +16709,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
   m_UiScaleMode: 0
   m_ReferencePixelsPerUnit: 100
@@ -16781,7 +16781,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7e680790c58e4ea8b63bf2194f644dd4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpotControlPanel
   spot: {fileID: 0}
   claimButton: {fileID: 421587090}
@@ -21338,7 +21338,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -21382,7 +21382,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -21428,7 +21428,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 20, y: -120}
-  m_SizeDelta: {x: 180, y: 40}
+  m_SizeDelta: {x: 117.7, y: 40}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &1064230596
 GameObject:
@@ -21572,7 +21572,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -25209,7 +25209,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -30007,11 +30007,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 84668129290477870, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.99997276
+      value: 0.99997264
       objectReference: {fileID: 0}
     - target: {fileID: 84668129290477870, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.0073827803
+      value: -0.007394851
       objectReference: {fileID: 0}
     - target: {fileID: 90292956880197145, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_Layer
@@ -30047,11 +30047,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 529949740417093357, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.78464115
+      value: 0.7846424
       objectReference: {fileID: 0}
     - target: {fileID: 529949740417093357, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.6199503
+      value: -0.61994874
       objectReference: {fileID: 0}
     - target: {fileID: 652962533958767157, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalPosition.x
@@ -30119,11 +30119,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 958437626337751091, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7846595
+      value: 0.7846594
       objectReference: {fileID: 0}
     - target: {fileID: 958437626337751091, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.61992705
+      value: -0.6199272
       objectReference: {fileID: 0}
     - target: {fileID: 1035452519355883360, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_Layer
@@ -30235,7 +30235,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1904991370787087820, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.007370737
+      value: 0.0073719663
       objectReference: {fileID: 0}
     - target: {fileID: 1933303739721955175, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_Layer
@@ -30355,11 +30355,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3545966535844449665, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.99997276
+      value: 0.99997264
       objectReference: {fileID: 0}
     - target: {fileID: 3545966535844449665, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.007386241
+      value: -0.007398331
       objectReference: {fileID: 0}
     - target: {fileID: 3559648168164544832, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_Layer
@@ -30451,11 +30451,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4641111928094065363, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.9468583
+      value: 0.9468584
       objectReference: {fileID: 0}
     - target: {fileID: 4641111928094065363, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.32165122
+      value: 0.3216509
       objectReference: {fileID: 0}
     - target: {fileID: 4739422014679054640, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_Layer
@@ -30463,11 +30463,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4761477327024784160, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.99997276
+      value: 0.9999729
       objectReference: {fileID: 0}
     - target: {fileID: 4761477327024784160, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.0073819924
+      value: 0.007375349
       objectReference: {fileID: 0}
     - target: {fileID: 4899445727069704813, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_Layer
@@ -30679,11 +30679,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7201143994774159001, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.78466064
+      value: 0.7846615
       objectReference: {fileID: 0}
     - target: {fileID: 7201143994774159001, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.61992556
+      value: -0.6199246
       objectReference: {fileID: 0}
     - target: {fileID: 7210582021701381239, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_Layer
@@ -30847,19 +30847,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8836964707956824375, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.78464335
+      value: 0.7846424
       objectReference: {fileID: 0}
     - target: {fileID: 8836964707956824375, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.6199475
+      value: -0.6199487
       objectReference: {fileID: 0}
     - target: {fileID: 8938403591932991410, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.94686264
+      value: 0.9468629
       objectReference: {fileID: 0}
     - target: {fileID: 8938403591932991410, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.32163817
+      value: 0.32163766
       objectReference: {fileID: 0}
     - target: {fileID: 8992847428473532096, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_Layer
@@ -30875,11 +30875,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9158612208757232116, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.9468581
+      value: 0.94685847
       objectReference: {fileID: 0}
     - target: {fileID: 9158612208757232116, guid: dccbbe5f6d13c4234a8e10478b9b85a8, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.3216517
+      value: 0.3216506
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -33950,7 +33950,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -33994,7 +33994,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -34040,7 +34040,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 20, y: -170}
-  m_SizeDelta: {x: 180, y: 40}
+  m_SizeDelta: {x: 93.1, y: 40}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &1710139891
 GameObject:
@@ -38721,7 +38721,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -38905,11 +38905,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 832354802}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 20, y: -280}
-  m_SizeDelta: {x: 520, y: 110}
-  m_Pivot: {x: 0, y: 1}
+  m_AnchorMin: {x: 1, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 205.4, y: 110}
+  m_Pivot: {x: 1, y: 1}
 --- !u!114 &2063800124
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -38920,7 +38920,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -38964,7 +38964,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
+  m_HorizontalAlignment: 4
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
