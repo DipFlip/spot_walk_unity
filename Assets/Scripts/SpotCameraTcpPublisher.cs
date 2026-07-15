@@ -16,7 +16,7 @@ public sealed class SpotCameraTcpPublisher : MonoBehaviour
     [Header("Image")]
     [SerializeField, Min(16)] private int width = 640;
     [SerializeField, Min(16)] private int height = 480;
-    [SerializeField, Range(1f, 30f)] private float framesPerSecond = 5f;
+    [SerializeField, Range(1f, 5f)] private float framesPerSecond = 5f;
     [SerializeField, Range(1, 100)] private int jpegQuality = 75;
 
     [Header("Diagnostics")]
@@ -50,11 +50,13 @@ public sealed class SpotCameraTcpPublisher : MonoBehaviour
     {
         width = Mathf.Max(16, width);
         height = Mathf.Max(16, height);
-        framesPerSecond = Mathf.Clamp(framesPerSecond, 1f, 30f);
+        framesPerSecond = Mathf.Clamp(framesPerSecond, 1f, 5f);
         jpegQuality = Mathf.Clamp(jpegQuality, 1, 100);
 
         originalTargetTexture = sensorCamera.targetTexture;
         originalCameraEnabled = sensorCamera.enabled;
+        sensorCamera.allowHDR = false;
+        sensorCamera.allowMSAA = false;
         renderTexture = new RenderTexture(
             width,
             height,

@@ -4395,7 +4395,7 @@ MonoBehaviour:
   reconnectDelaySeconds: 2
   poseRateHz: 20
   velocityCommandTimeoutSeconds: 0.35
-  targetFrameRate: 60
+  targetFrameRate: 30
   initiallyPoweredOn: 0
   initiallyStanding: 0
   logConnectionChanges: 1
