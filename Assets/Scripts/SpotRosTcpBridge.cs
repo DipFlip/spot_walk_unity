@@ -61,7 +61,7 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
     [SerializeField, Min(0.05f)] private float velocityCommandTimeoutSeconds = 0.35f;
 
     [Header("Runtime")]
-    [SerializeField, Range(15, 240)] private int targetFrameRate = 60;
+    [SerializeField, Range(15, 240)] private int targetFrameRate = 30;
 
     [Header("Initial Robot State")]
     [SerializeField] private bool initiallyPoweredOn;
