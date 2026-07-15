@@ -192,6 +192,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 9e274a6d95745b342a40b4dd420f7ff1, type: 2}
+    - target: {fileID: -4133508867597960466, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: -3920230537519637952, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
       propertyPath: m_ScaleInLightmap
       value: 20
@@ -377,6 +381,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1499136569803499150, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1499136569803499150, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 0
       objectReference: {fileID: 0}
@@ -414,6 +422,10 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 876ef82d3c6d6e444903886ba4b4bf94, type: 2}
     - target: {fileID: 2286698936146791501, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
       propertyPath: m_StaticEditorFlags
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2989989648084455762, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
+      propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2989989648084455762, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
@@ -551,10 +563,68 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5360483138513381356, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6627721783001125107}
+    - targetCorrespondingSourceObject: {fileID: -1243045324142825372, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3935177181326508061}
   m_SourcePrefab: {fileID: 100100000, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
 --- !u!4 &3735166180354720950 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
   m_PrefabInstance: {fileID: 3773806088355701597}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &6548392709800088377 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -1243045324142825372, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
+  m_PrefabInstance: {fileID: 3773806088355701597}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &3935177181326508061
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6548392709800088377}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.8704394, y: 9.404253, z: 0.6264189}
+  m_Center: {x: 0, y: -0.018671274, z: 0}
+--- !u!1 &9095867892429898929 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5360483138513381356, guid: 0ed1e140dd192584da4fcf0a7c9ca9c8, type: 3}
+  m_PrefabInstance: {fileID: 3773806088355701597}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &6627721783001125107
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9095867892429898929}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.0976892, y: 0.9006945, z: 0.77697355}
+  m_Center: {x: 0, y: 0, z: 0}
