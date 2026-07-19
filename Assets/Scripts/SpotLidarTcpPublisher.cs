@@ -104,7 +104,7 @@ public sealed class SpotLidarTcpPublisher : MonoBehaviour
         commands = new NativeArray<RaycastCommand>(rayCount, Allocator.Persistent);
         hits = new NativeArray<RaycastHit>(rayCount, Allocator.Persistent);
         localDirections = new Vector3[rayCount];
-        robotRoot = transform.parent;
+        robotRoot = transform.root;
         BuildLocalDirections();
         noiseRandom = new System.Random(randomSeed);
         sequence = 0;
@@ -167,7 +167,9 @@ public sealed class SpotLidarTcpPublisher : MonoBehaviour
         WriteSingleLittleEndian(packet, ref offset, verticalIncrement);
         WriteSingleLittleEndian(packet, ref offset, minimumRange);
         WriteSingleLittleEndian(packet, ref offset, maximumRange);
-        RosPose mountPose = ToRosPose(transform.localPosition, transform.localRotation);
+        Vector3 mountPosition = robotRoot.InverseTransformPoint(transform.position);
+        Quaternion mountRotation = Quaternion.Inverse(robotRoot.rotation) * transform.rotation;
+        RosPose mountPose = ToRosPose(mountPosition, mountRotation);
         WriteSingleLittleEndian(packet, ref offset, mountPose.Position.x);
         WriteSingleLittleEndian(packet, ref offset, mountPose.Position.y);
         WriteSingleLittleEndian(packet, ref offset, mountPose.Position.z);
