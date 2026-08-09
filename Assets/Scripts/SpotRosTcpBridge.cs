@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -39,6 +40,24 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         public float vision_qy;
         public float vision_qz;
         public float vision_qw;
+        public uint sequence;
+        public float background_rate_per_detector;
+        public RadiationSourceMessage[] sources;
+    }
+
+    [Serializable]
+    private sealed class RadiationSourceMessage
+    {
+        public string id;
+        public string isotope;
+        public float activity_bq;
+        public float x;
+        public float y;
+        public float z;
+        public float qx;
+        public float qy;
+        public float qz;
+        public float qw;
     }
 
     private struct RosPose
@@ -62,6 +81,10 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
 
     [Header("Runtime")]
     [SerializeField, Range(15, 240)] private int targetFrameRate = 30;
+
+    [Header("Radiation Simulation")]
+    [SerializeField, Range(0.5f, 30f)] private float radiationSourceRateHz = 5f;
+    [SerializeField, Min(0f)] private float backgroundRatePerDetector = 1000f;
 
     [Header("Initial Robot State")]
     [SerializeField] private bool initiallyPoweredOn;
@@ -93,6 +116,9 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
     private int connectionState;
     private int reportedConnectionState = int.MinValue;
     private int previousTargetFrameRate;
+    private readonly List<RadiationSource> radiationSources = new List<RadiationSource>();
+    private float nextRadiationSourceTime;
+    private uint radiationSequence;
 
     public bool IsConnected => Volatile.Read(ref connectionState) == 1;
     public bool HasLease => hasLease;
@@ -110,6 +136,8 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         poseRateHz = Mathf.Clamp(poseRateHz, 1f, 100f);
         velocityCommandTimeoutSeconds = Mathf.Max(0.05f, velocityCommandTimeoutSeconds);
         targetFrameRate = Mathf.Clamp(targetFrameRate, 15, 240);
+        radiationSourceRateHz = Mathf.Clamp(radiationSourceRateHz, 0.5f, 30f);
+        backgroundRatePerDetector = Mathf.Max(0f, backgroundRatePerDetector);
         previousTargetFrameRate = Application.targetFrameRate;
         Application.targetFrameRate = targetFrameRate;
         initialPosition = transform.position;
@@ -118,6 +146,8 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         previousRotation = initialRotation;
         previousPoseTime = Time.unscaledTime;
         nextPoseTime = previousPoseTime;
+        nextRadiationSourceTime = previousPoseTime;
+        radiationSequence = 0;
         hasLease = false;
         poweredOn = initiallyPoweredOn;
         standing = initiallyStanding && poweredOn;
@@ -152,6 +182,12 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         {
             PublishPose();
             nextPoseTime = Time.unscaledTime + 1f / poseRateHz;
+        }
+
+        if (Time.unscaledTime >= nextRadiationSourceTime)
+        {
+            PublishRadiationSources();
+            nextRadiationSourceTime = Time.unscaledTime + 1f / radiationSourceRateHz;
         }
     }
 
@@ -358,6 +394,51 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
         previousPosition = transform.position;
         previousRotation = transform.rotation;
         previousPoseTime = now;
+    }
+
+    private void PublishRadiationSources()
+    {
+        RadiationSource.CopyActiveSourcesTo(radiationSources);
+        radiationSources.Sort((left, right) =>
+            string.CompareOrdinal(left.SourceId, right.SourceId));
+        var sourceIds = new HashSet<string>();
+        var sourceMessages = new RadiationSourceMessage[radiationSources.Count];
+        for (int index = 0; index < radiationSources.Count; index++)
+        {
+            RadiationSource source = radiationSources[index];
+            if (!sourceIds.Add(source.SourceId))
+            {
+                Debug.LogError($"Duplicate RadiationSource id '{source.SourceId}'.", source);
+                return;
+            }
+
+            Vector3 relativePosition = Quaternion.Inverse(initialRotation) *
+                (source.transform.position - initialPosition);
+            Quaternion relativeRotation = Quaternion.Inverse(initialRotation) *
+                source.transform.rotation;
+            RosPose pose = ToRosPose(relativePosition, relativeRotation);
+            sourceMessages[index] = new RadiationSourceMessage
+            {
+                id = source.SourceId,
+                isotope = source.Isotope.ToString(),
+                activity_bq = (float)source.ActivityBecquerels,
+                x = pose.Position.x,
+                y = pose.Position.y,
+                z = pose.Position.z,
+                qx = pose.Rotation.x,
+                qy = pose.Rotation.y,
+                qz = pose.Rotation.z,
+                qw = pose.Rotation.w
+            };
+        }
+
+        Send(new BridgeMessage
+        {
+            type = "radiation_sources",
+            sequence = radiationSequence++,
+            background_rate_per_detector = backgroundRatePerDetector,
+            sources = sourceMessages
+        });
     }
 
     private static RosPose ToRosPose(Vector3 unityPosition, Quaternion unityRotation)
