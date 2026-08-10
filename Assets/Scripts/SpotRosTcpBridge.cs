@@ -398,18 +398,18 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
 
     private void PublishRadiationSources()
     {
-        RadiationSource.CopyActiveSourcesTo(radiationSources);
+        RadiationSource.CopyActiveSourcesTo(radiationSources, gameObject.scene);
         radiationSources.Sort((left, right) =>
             string.CompareOrdinal(left.SourceId, right.SourceId));
         var sourceIds = new HashSet<string>();
-        var sourceMessages = new RadiationSourceMessage[radiationSources.Count];
+        var sourceMessages = new List<RadiationSourceMessage>(radiationSources.Count);
         for (int index = 0; index < radiationSources.Count; index++)
         {
             RadiationSource source = radiationSources[index];
             if (!sourceIds.Add(source.SourceId))
             {
                 Debug.LogError($"Duplicate RadiationSource id '{source.SourceId}'.", source);
-                return;
+                continue;
             }
 
             Vector3 relativePosition = Quaternion.Inverse(initialRotation) *
@@ -417,7 +417,7 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
             Quaternion relativeRotation = Quaternion.Inverse(initialRotation) *
                 source.transform.rotation;
             RosPose pose = ToRosPose(relativePosition, relativeRotation);
-            sourceMessages[index] = new RadiationSourceMessage
+            sourceMessages.Add(new RadiationSourceMessage
             {
                 id = source.SourceId,
                 isotope = source.Isotope.ToString(),
@@ -429,7 +429,7 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
                 qy = pose.Rotation.y,
                 qz = pose.Rotation.z,
                 qw = pose.Rotation.w
-            };
+            });
         }
 
         Send(new BridgeMessage
@@ -437,7 +437,7 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
             type = "radiation_sources",
             sequence = radiationSequence++,
             background_rate_per_detector = backgroundRatePerDetector,
-            sources = sourceMessages
+            sources = sourceMessages.ToArray()
         });
     }
 

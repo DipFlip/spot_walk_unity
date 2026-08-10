@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public enum RadiationIsotope
 {
@@ -27,12 +28,14 @@ public sealed class RadiationSource : MonoBehaviour
     public RadiationIsotope Isotope => isotope;
     public double ActivityBecquerels => activityMicroCuries * 3.7e4;
 
-    public static void CopyActiveSourcesTo(List<RadiationSource> destination)
+    public static void CopyActiveSourcesTo(List<RadiationSource> destination, Scene scene)
     {
         destination.Clear();
         foreach (RadiationSource source in ActiveSources)
         {
-            if (source != null && source.isActiveAndEnabled)
+            if (source != null &&
+                source.isActiveAndEnabled &&
+                source.gameObject.scene == scene)
             {
                 destination.Add(source);
             }
@@ -53,6 +56,7 @@ public sealed class RadiationSource : MonoBehaviour
     private void OnEnable()
     {
         EnsureSourceId();
+        EnsureUniqueActiveSourceId();
         ActiveSources.Add(this);
     }
 
@@ -66,6 +70,33 @@ public sealed class RadiationSource : MonoBehaviour
         if (string.IsNullOrWhiteSpace(sourceId))
         {
             sourceId = Guid.NewGuid().ToString("N");
+        }
+    }
+
+    private void EnsureUniqueActiveSourceId()
+    {
+        if (!Application.isPlaying)
+        {
+            return;
+        }
+
+        foreach (RadiationSource source in ActiveSources)
+        {
+            if (source == null ||
+                source == this ||
+                source.gameObject.scene != gameObject.scene ||
+                !string.Equals(source.sourceId, sourceId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string duplicateId = sourceId;
+            sourceId = Guid.NewGuid().ToString("N");
+            Debug.LogWarning(
+                $"RadiationSource id '{duplicateId}' was duplicated; " +
+                $"assigned runtime id '{sourceId}' to '{name}'.",
+                this);
+            return;
         }
     }
 }
