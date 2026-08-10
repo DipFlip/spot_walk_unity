@@ -4698,7 +4698,7 @@ MonoBehaviour:
   stepHeight: 0.09
   minimumMovingStrideScale: 0.35
   backwardStrideMultiplier: 0.55
-  strafeStrideMultiplier: 0.5
+  strafeStrideMultiplier: 1
   backwardFootBias: 0.16
   strafeFootBias: 0.12
   stepWidth: 0.02

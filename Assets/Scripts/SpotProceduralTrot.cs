@@ -37,7 +37,7 @@ public sealed class SpotProceduralTrot : MonoBehaviour
     [SerializeField] private float stepHeight = 0.09f;
     [SerializeField] private float minimumMovingStrideScale = 0.35f;
     [SerializeField] private float backwardStrideMultiplier = 0.55f;
-    [SerializeField] private float strafeStrideMultiplier = 0.5f;
+    [SerializeField] private float strafeStrideMultiplier = 1f;
     [SerializeField] private float backwardFootBias = 0.16f;
     [SerializeField] private float strafeFootBias = 0.12f;
     [SerializeField] private float stepWidth = 0.02f;
@@ -724,7 +724,7 @@ public sealed class SpotProceduralTrot : MonoBehaviour
 
         if (Mathf.Approximately(strafeStrideMultiplier, 0f))
         {
-            strafeStrideMultiplier = 0.5f;
+            strafeStrideMultiplier = 1f;
         }
 
         if (Mathf.Approximately(backwardFootBias, 0f))
