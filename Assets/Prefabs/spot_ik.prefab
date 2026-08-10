@@ -3872,7 +3872,7 @@ GameObject:
   - component: {fileID: 2347657005247548325}
   - component: {fileID: 7539817645578610153}
   m_Layer: 3
-  m_Name: Camera
+  m_Name: frontleft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4003,10 +4003,12 @@ MonoBehaviour:
   host: 127.0.0.1
   port: 50051
   reconnectDelaySeconds: 2
+  cameraName: frontleft
   width: 640
   height: 480
   framesPerSecond: 5
   jpegQuality: 75
+  depthDownsample: 4
   logConnectionChanges: 1
 --- !u!1 &7835599572670323292
 GameObject:
