@@ -86,6 +86,14 @@ public sealed class SpotKinematicDrive : MonoBehaviour
         externalYawVelocity = yawRadiansPerSecond;
     }
 
+    public void ResetMotionState()
+    {
+        SetExternalControlEnabled(false);
+        lastNavMeshMoveDirection = Vector3.zero;
+        gaitTime = 0f;
+        IsSteppingInPlaceRequested = false;
+    }
+
     private void Awake()
     {
         if (visualRoot != null)

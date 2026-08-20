@@ -328,6 +328,17 @@ public sealed class SpotRosTcpBridge : MonoBehaviour
                 StopMotion();
                 responseMessage = success ? "Robot stopped" : "Claim the lease before stopping";
                 break;
+            case "reset":
+                StopMotion();
+                transform.SetPositionAndRotation(initialPosition, initialRotation);
+                drive.ResetMotionState();
+                previousPosition = initialPosition;
+                previousRotation = initialRotation;
+                previousPoseTime = Time.unscaledTime;
+                nextPoseTime = previousPoseTime;
+                success = true;
+                responseMessage = "Robot pose reset to the simulation spawn";
+                break;
             default:
                 success = false;
                 responseMessage = $"Unsupported command: {command}";
