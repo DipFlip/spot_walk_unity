@@ -1666,7 +1666,7 @@ MonoBehaviour:
   verticalChannels: 5
   scansPerSecond: 10
   minimumRange: 0.25
-  maximumRange: 20
+  maximumRange: 30
   environmentLayers:
     serializedVersion: 2
     m_Bits: 4294967295

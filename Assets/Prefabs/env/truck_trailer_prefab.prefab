@@ -51,8 +51,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.47968674, y: 3.40619, z: 3.2922025}
-  m_Center: {x: 7.4289064, y: -0.37186623, z: 0.05074048}
+  m_Size: {x: 0.47968674, y: 3.3194892, z: 3.2922025}
+  m_Center: {x: 7.4289064, y: -0.3285159, z: 0.05074048}
 --- !u!1 &173590705338291179
 GameObject:
   m_ObjectHideFlags: 0
@@ -231,8 +231,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 17.360939, y: 3.40619, z: 0.3437655}
-  m_Center: {x: -1.358593, y: -0.37186623, z: -1.423478}
+  m_Size: {x: 17.360939, y: 3.40619, z: 0.3654406}
+  m_Center: {x: -1.358593, y: -0.37186623, z: -1.4126405}
 --- !u!1 &1497843787165806573
 GameObject:
   m_ObjectHideFlags: 0
@@ -413,6 +413,59 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 17.360939, y: 0.3999393, z: 3.350015}
   m_Center: {x: -1.358593, y: 1.4781333, z: 0.07964671}
+--- !u!1 &3596526790203659580
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4684138133330717926}
+  - component: {fileID: 8568787128990151594}
+  m_Layer: 0
+  m_Name: collider (4)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4684138133330717926
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3596526790203659580}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 9.92516, y: -1.591, z: -1.49}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7570287039052056686}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &8568787128990151594
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3596526790203659580}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 17.124298, y: 0.17572808, z: 2.6968791}
+  m_Center: {x: -1.363689, y: 1.5902389, z: 0.10401833}
 --- !u!1 &3892151248189157674
 GameObject:
   m_ObjectHideFlags: 0
@@ -591,8 +644,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 17.360939, y: 3.40619, z: 0.34376597}
-  m_Center: {x: -1.3585935, y: -0.37186623, z: 1.6405843}
+  m_Size: {x: 17.360939, y: 3.40619, z: 0.38711727}
+  m_Center: {x: -1.358593, y: -0.37186623, z: 1.6189086}
 --- !u!1 &7025633758710560646
 GameObject:
   m_ObjectHideFlags: 0
@@ -631,6 +684,7 @@ Transform:
   - {fileID: 3201957115501908607}
   - {fileID: 8728110444452593007}
   - {fileID: 3986738982787526855}
+  - {fileID: 4684138133330717926}
   - {fileID: 1987123988937193706}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -957,6 +1011,14 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -4949846540782249421, guid: f957c0d0c794b08468db34a65a5dbb51, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: -4949846540782249421, guid: f957c0d0c794b08468db34a65a5dbb51, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -4949846540782249421, guid: f957c0d0c794b08468db34a65a5dbb51, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 1
       objectReference: {fileID: 0}
@@ -1021,8 +1083,16 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6887196193573628603, guid: f957c0d0c794b08468db34a65a5dbb51, type: 3}
-      propertyPath: m_StaticEditorFlags
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6887196193573628603, guid: f957c0d0c794b08468db34a65a5dbb51, type: 3}
+      propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6887196193573628603, guid: f957c0d0c794b08468db34a65a5dbb51, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
       objectReference: {fileID: 0}
     - target: {fileID: 8471991440231579649, guid: f957c0d0c794b08468db34a65a5dbb51, type: 3}
       propertyPath: m_ScaleInLightmap

@@ -44,7 +44,7 @@ public sealed class SpotLidarTcpPublisher : MonoBehaviour
     [SerializeField, Range(1, 32)] private int verticalChannels = 3;
     [SerializeField, Range(1f, 30f)] private float scansPerSecond = 5f;
     [SerializeField, Min(0.01f)] private float minimumRange = 0.25f;
-    [SerializeField, Min(0.1f)] private float maximumRange = 20f;
+    [SerializeField, Min(0.1f)] private float maximumRange = 30f;
     [SerializeField] private LayerMask environmentLayers = ~0;
 
     [Header("Measurement Model")]
@@ -183,14 +183,23 @@ public sealed class SpotLidarTcpPublisher : MonoBehaviour
             RaycastHit hit = hits[index];
             float distance = float.PositiveInfinity;
             if (hit.collider != null &&
-                (robotRoot == null || !hit.collider.transform.IsChildOf(robotRoot)) &&
-                noiseRandom.NextDouble() >= dropoutProbability)
+                (robotRoot == null || !hit.collider.transform.IsChildOf(robotRoot)))
             {
-                float sigma = noiseBaseSigmaMeters + hit.distance * noiseRangeSigmaFraction;
-                distance = Mathf.Clamp(
-                    hit.distance + sigma * NextGaussian(),
-                    minimumRange,
-                    maximumRange);
+                // Keep random measurement loss distinct from a genuine no-hit.
+                // The ROS bridge turns +infinity into a max-range clearing ray,
+                // while NaN remains an unobserved/dropout ray.
+                if (noiseRandom.NextDouble() < dropoutProbability)
+                {
+                    distance = float.NaN;
+                }
+                else
+                {
+                    float sigma = noiseBaseSigmaMeters + hit.distance * noiseRangeSigmaFraction;
+                    distance = Mathf.Clamp(
+                        hit.distance + sigma * NextGaussian(),
+                        minimumRange,
+                        maximumRange);
+                }
             }
             WriteSingleLittleEndian(packet, ref offset, distance);
         }

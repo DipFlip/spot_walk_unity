@@ -1,0 +1,6 @@
+path: /Users/emil/Documents/Spot_simulation/TrainingData/barrell/factory_smaller_20260810_174339/yolo
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: barrell

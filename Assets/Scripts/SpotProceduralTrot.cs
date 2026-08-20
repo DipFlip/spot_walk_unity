@@ -24,6 +24,9 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         [NonSerialized] public Vector3 swingStartWorld;
         [NonSerialized] public Vector3 swingTargetWorld;
         [NonSerialized] public bool wasSwinging;
+        [NonSerialized] public Collider lastLoggedGroundCollider;
+        [NonSerialized] public float lastLoggedGroundHeight;
+        [NonSerialized] public bool hasLoggedGroundContact;
     }
 
     [Header("Neutral Pose")]
@@ -89,6 +92,9 @@ public sealed class SpotProceduralTrot : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool drawFootTargets;
+    [SerializeField] private bool logFootGroundContacts = true;
+    [Min(0f)]
+    [SerializeField] private float groundContactHeightLogThreshold = 0.05f;
 
     [SerializeField]
     private Leg[] legs =
@@ -199,6 +205,7 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         }
 
         UpdateFootTargets(isMoving, dt);
+        LogFootGroundContacts();
         UpdateBodyTerrainPose(dt, false);
         PoseNeutral();
         AnimateBody();
@@ -433,9 +440,15 @@ public sealed class SpotProceduralTrot : MonoBehaviour
             {
                 leg.swingStartWorld = leg.plantedWorld;
                 float catchUp = Mathf.Clamp01(Vector3.Distance(leg.plantedWorld, homeWorld) / Mathf.Max(strideLength, 0.001f));
-                Vector3 catchUpTarget = ProjectFootToGround(homeWorld + travelStep + backwardBias + strafeBias + turnStep, homeWorld);
+                Vector3 catchUpTarget = ProjectFootToGround(
+                    homeWorld + travelStep + backwardBias + strafeBias + turnStep,
+                    homeWorld);
                 leg.swingTargetWorld = Vector3.Lerp(desiredPlant, catchUpTarget, catchUp);
-                leg.swingTargetWorld = ProjectFootToGround(leg.swingTargetWorld, homeWorld);
+                leg.swingTargetWorld = ProjectFootToGround(
+                    leg.swingTargetWorld,
+                    homeWorld,
+                    debugLeg: leg,
+                    probe: "swing landing target");
             }
 
             if (shouldSwing)
@@ -451,7 +464,11 @@ public sealed class SpotProceduralTrot : MonoBehaviour
                 float allowedDrift = Mathf.Lerp((strideLength * strideScale) + minStepDistance, turnReplantDistance, Mathf.Abs(turnAmount));
                 if (!isMoving || stepBlend < 0.1f || drift > allowedDrift)
                 {
-                    Vector3 groundedHome = ProjectFootToGround(homeWorld, leg.plantedWorld);
+                    Vector3 groundedHome = ProjectFootToGround(
+                        homeWorld,
+                        leg.plantedWorld,
+                        debugLeg: leg,
+                        probe: "planted home target");
                     leg.plantedWorld = Vector3.Lerp(leg.plantedWorld, groundedHome, 1f - Mathf.Exp(-footPlantSharpness * dt));
                 }
             }
@@ -478,16 +495,30 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         return transform.TransformDirection(tangentLocal) * (Mathf.Abs(turnAmount) * turnStrideLength * stepBlend);
     }
 
-    private Vector3 ProjectFootToGround(Vector3 candidateWorld, Vector3 referenceWorld, bool clampHeight = true)
+    private Vector3 ProjectFootToGround(
+        Vector3 candidateWorld,
+        Vector3 referenceWorld,
+        bool clampHeight = true,
+        Leg debugLeg = null,
+        string probe = "ground target")
     {
         if (!useTerrainRaycasts)
         {
             return candidateWorld;
         }
 
-        if (!TryProjectFootToGround(candidateWorld, out Vector3 grounded))
+        if (!TryProjectFootToGround(candidateWorld, out Vector3 grounded, out RaycastHit hit))
         {
+            // A ray miss means there is no measured surface at the candidate position.
+            // Keep the last/reference height instead of snapping to the neutral-pose
+            // candidate height, which can look like an invisible raised platform.
+            candidateWorld.y = referenceWorld.y;
             return candidateWorld;
+        }
+
+        if (debugLeg != null)
+        {
+            LogGroundHit(debugLeg, hit, probe);
         }
 
         float heightDelta = grounded.y - referenceWorld.y;
@@ -501,6 +532,11 @@ public sealed class SpotProceduralTrot : MonoBehaviour
 
     private bool TryProjectFootToGround(Vector3 candidateWorld, out Vector3 grounded)
     {
+        return TryProjectFootToGround(candidateWorld, out grounded, out _);
+    }
+
+    private bool TryProjectFootToGround(Vector3 candidateWorld, out Vector3 grounded, out RaycastHit closestHit)
+    {
         Vector3 rayOrigin = candidateWorld + Vector3.up * raycastHeight;
         int hitCount = Physics.RaycastNonAlloc(
             rayOrigin,
@@ -513,11 +549,12 @@ public sealed class SpotProceduralTrot : MonoBehaviour
         if (hitCount == 0)
         {
             grounded = candidateWorld;
+            closestHit = default;
             return false;
         }
 
         bool foundGround = false;
-        RaycastHit closestHit = default;
+        closestHit = default;
         float closestDistance = float.PositiveInfinity;
         for (int i = 0; i < hitCount; i++)
         {
@@ -543,6 +580,85 @@ public sealed class SpotProceduralTrot : MonoBehaviour
 
         grounded = closestHit.point + closestHit.normal * footGroundOffset;
         return true;
+    }
+
+    private void LogFootGroundContacts()
+    {
+        if (!logFootGroundContacts || !useTerrainRaycasts || legs == null)
+        {
+            return;
+        }
+
+        foreach (Leg leg in legs)
+        {
+            if (leg == null || leg.lowerLeg == null || leg.wasSwinging)
+            {
+                continue;
+            }
+
+            bool foundGround = TryProjectFootToGround(leg.plantedWorld, out _, out RaycastHit hit);
+            if (!foundGround)
+            {
+                if (leg.hasLoggedGroundContact)
+                {
+                    Debug.LogWarning(
+                        $"[Spot Foot Contact] {leg.hipName}: no ground below planted foot at {leg.plantedWorld:F3} " +
+                        $"(layers={groundLayers.value}, rayLength={raycastHeight + raycastDistance:F2}m).",
+                        this);
+                    leg.hasLoggedGroundContact = false;
+                    leg.lastLoggedGroundCollider = null;
+                }
+
+                continue;
+            }
+
+            LogGroundHit(leg, hit, "planted foot");
+        }
+    }
+
+    private void LogGroundHit(Leg leg, RaycastHit hit, string probe)
+    {
+        if (!logFootGroundContacts)
+        {
+            return;
+        }
+
+        bool colliderChanged = !leg.hasLoggedGroundContact || hit.collider != leg.lastLoggedGroundCollider;
+        bool heightChanged = leg.hasLoggedGroundContact &&
+            Mathf.Abs(hit.point.y - leg.lastLoggedGroundHeight) >= groundContactHeightLogThreshold;
+        if (!colliderChanged && !heightChanged)
+        {
+            return;
+        }
+
+        string objectPath = GetTransformPath(hit.collider.transform);
+        Renderer hitRenderer = hit.collider.GetComponent<Renderer>();
+        string rendererState = hitRenderer == null
+            ? "none"
+            : $"{hitRenderer.GetType().Name}, enabled={hitRenderer.enabled}";
+        Debug.Log(
+            $"[Spot Foot Contact] {leg.hipName} {probe} selected '{objectPath}' " +
+            $"(collider={hit.collider.GetType().Name}, layer={LayerMask.LayerToName(hit.collider.gameObject.layer)}" +
+            $"[{hit.collider.gameObject.layer}], tag={hit.collider.tag}, active={hit.collider.gameObject.activeInHierarchy}, " +
+            $"renderer={rendererState}, triangle={hit.triangleIndex}, " +
+            $"point={hit.point:F3}, normal={hit.normal:F3}, distance={hit.distance:F3}m).",
+            hit.collider);
+
+        leg.hasLoggedGroundContact = true;
+        leg.lastLoggedGroundCollider = hit.collider;
+        leg.lastLoggedGroundHeight = hit.point.y;
+    }
+
+    private static string GetTransformPath(Transform target)
+    {
+        string path = target.name;
+        while (target.parent != null)
+        {
+            target = target.parent;
+            path = target.name + "/" + path;
+        }
+
+        return path;
     }
 
     private void SolveLegs()
