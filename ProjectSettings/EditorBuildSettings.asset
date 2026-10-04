@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/stock/urp_scene_with_training.unity
-    guid: 929160706162bbf48b9f7b4c182d62dd
+    path: Assets/Scenes/factory_smaller.unity
+    guid: b07a72054e648452d8bccee9c51e1630
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: b39d807b8d6d2444bbd7b42e1eb53796, type: 3}
